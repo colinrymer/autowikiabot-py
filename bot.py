@@ -11,17 +11,17 @@ except ImportError:
 BASE_URL = "wikia.com/wiki/"
 REPLY_MESSAGE = "^(Want to help make this better? Check out the) [^source ^code](https://github.com/Timidger/WikiaBot)"
 
+def login():
+    bot = praw.Reddit("Wikia Bot: The wikia version of autowikipedia bot")
 
-bot = praw.Reddit("Wikia Bot: The wikia version of autowikipedia bot")
+    with open("datafile.inf", "r") as login_details:
+        USER = login_details.readline().strip()
+        PASSWORD = login_details.readline().strip()
 
-with open("datafile.inf", "r") as login_details:
-    USER = login_details.readline().strip()
-    PASSWORD = login_details.readline().strip()
+    bot.login(USER, PASSWORD)
+    print("Logged in!")
+    return bot
 
-bot.login(USER, PASSWORD)
-print("Logged in!")
-
-sub_reddit = str(sys.argv[1])
 #sub_wikia = str(sys.argv[2])
 
 def check_user(user):
@@ -79,22 +79,27 @@ def get_message(title, link, summary):
                             ))
     return BASE_MESSAGE.format(title=title, link=link, body=summary)
                    
-
-while True:
-    try:
-        for post in praw.helpers.comment_stream(bot, sub_reddit, limit=None, verbosity=0):
-            if BASE_URL in post.body and check_user(post.author.name) and not_posted(post):
-                print("Found a post to reply to!")
-                link = find_link(post.body)
-                print("Link: ", link)
-                title = find_title(link)
-                print("Title: ", title)
-                sub_wikia = find_sub_wikia(link)
-                print("Sub-Wikia:", sub_wikia)
-                summary = wikia.summary(title, sub_wikia)
-                message = get_message(title, link, summary) 
-                post.reply(message)
-    # Just gotta keep chugging along
-    except Exception as e:
-        fail(e)
-        print(post.body)
+if __name__ == "__main__":
+    bot = login()
+    sub_reddit = str(sys.argv[1])
+    while True:
+        try:
+            for post in praw.helpers.comment_stream(bot, sub_reddit, limit=None, verbosity=0):
+                if BASE_URL in post.body and check_user(post.author.name) and not_posted(post):
+                    print("Found a post to reply to!")
+                    link = find_link(post.body)
+                    print("Link: ", link)
+                    title = find_title(link)
+                    print("Title: ", title)
+                    sub_wikia = find_sub_wikia(link)
+                    print("Sub-Wikia:", sub_wikia)
+                    summary = wikia.summary(title, sub_wikia)
+                    message = get_message(title, link, summary) 
+                    # Quick hack until we fix the Wikia library
+                    if "REDIRECT" in message:
+                        continue
+                    post.reply(message)
+        # Just gotta keep chugging along
+        except Exception as e:
+            fail(e)
+            print(post.body)
