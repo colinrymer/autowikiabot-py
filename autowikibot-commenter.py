@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import praw, time, datetime, re, urllib, urllib2, pickle, pyimgur, os, traceback, wikipedia, string, socket, sys, collections
-from nsfw import getnsfw
+import praw, time, datetime, re, urllib, urllib2, pickle, pyimgur, os, traceback, wikia, string, socket, sys, collections
+#from nsfw import getnsfw
 from util import success, warn, log, fail, special, bluelog
 from bs4 import BeautifulSoup
 from HTMLParser import HTMLParser
 
+WIKI_URL = 'wikia.com/wiki'
+wikia.set_subwikia(sys.argv[2])
 ### Uncomment to debug
 #import logging
 #logging.basicConfig(level=logging.DEBUG)
@@ -75,7 +77,7 @@ with open ('datafile.inf', 'r') as myfile:
   datafile_lines=myfile.readlines()
 
 ### Login
-r = praw.Reddit("autowikibot by /u/acini at /r/autowikibot")
+r = praw.Reddit("autowikiabot by /u/timidger at /r/autowikiabot")
 USERNAME = datafile_lines[0].strip()
 PASSWORD = datafile_lines[1].strip()
 Trying = True
@@ -166,16 +168,16 @@ def filterpass(post):
   if (post.author.name == USERNAME) or post.author.name in banned_users:
     return False
   summary_call = re.search(r'wikibot.\s*wh.{1,3}(\'s|\s+is|\s+are|\s+was)\s+(an\s+|a\s+|the\s+|)(.*?)$',post.body.lower()) or re.search(r'wikibot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',post.body.lower()) or re.search("\?\-.*\-\?",post.body.lower())
-  has_link = any(string in post.body for string in ['en.wikipedia.org/wiki/', 'en.m.wikipedia.org/wiki/'])
+  has_link = any(string in post.body for string in [WIKI_URL])
   mod_switch = re.search(r'wikibot moderator switch: summon only: on',post.body.lower()) or re.search(r'wikibot moderator switch: summon only: off',post.body.lower()) or re.search(r'wikibot moderator switch: root only: on',post.body.lower()) or re.search(r'wikibot moderator switch: root only: off',post.body.lower())
   if has_link or summary_call or mod_switch:
     if re.search(r"&gt;", post.body) and not summary_call and not re.search(r"autowikibot-welcome-token", post.body.lower()):
       return False
-    elif re.search(r"wikipedia.org/wiki/.*wikipedia.org/wiki/", post.body, re.DOTALL):
+    elif re.search(r"wikia.com/wiki/.*wikia.com/wiki/", post.body, re.DOTALL):
       return False
     elif str(post.subreddit) in badsubs and not mod_switch:
       return False
-    elif any(string in post.body for string in ['/wiki/File:', '/wiki/List_of', '/wiki/User:', '/wiki/Template:', '/wiki/Category:', '/wiki/Wikipedia:', '/wiki/Talk:']):
+    elif any(string in post.body for string in ['/wiki/File:', '/wiki/List_of', '/wiki/User:', '/wiki/Template:', '/wiki/Category:', '/wiki/Wikia:', '/wiki/Talk:']):
       return False
     elif str(post.subreddit) in root_only_subs and not post.is_root and not mod_switch:
       return False
@@ -199,7 +201,7 @@ def filterpass(post):
 
 def get_url_string(post):
   try:
-    after_split = post.body.split("wikipedia.org/wiki/")[1]
+    after_split = post.body.split(WIKI_URL)[1]
     for e in ['\n', ' ']:
       after_split = after_split.split(e)[0]
     if after_split.endswith(')') and not re.search(r'\(',after_split):
@@ -237,19 +239,19 @@ def process_summary_call(post):
     #log("EMPTY TERM")
     return(False,False)
   try:
-    title = wikipedia.page(term,auto_suggest=False).title
+    title = wikia.page(term,auto_suggest=False).title
     if title.lower() == term:
       bit_comment_start = ""
     elif title.lower() != term:
       try:
-	discard = wikipedia.page(term,auto_suggest=False,redirect=False).title
+	discard = wikia.page(term,auto_suggest=False,redirect=False).title
       except Exception as e:
 	if re.search('resulted in a redirect',str(e)):
 	  bit_comment_start = "*\"" + term.strip() + "\" redirects to* "
     else:
       bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
     if re.search(r'#',title):
-      url = wikipedia.page(title.split('#')[0],auto_suggest=False).url
+      url = wikia.page(title.split('#')[0],auto_suggest=False).url
       sectionurl =  url + "#" + title.split('#')[1]
       comment = "*Nearest match for* ***" + term.strip() + "*** *is the section ["+title.split('#')[1]+"]("+sectionurl.replace(')','\)')+") in article ["+title.split('#')[0]+"]("+url+").*\n\n---\n\n"
       post_reply(comment,post)
@@ -262,7 +264,7 @@ def process_summary_call(post):
     if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
       deflist = ">Definitions for few of those terms:"
       for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-	deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
+	deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(val,auto_suggest=False,sentences=1)
 	if idx > 3:
 	  break
       summary = "*Oops,* ***"+term.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
@@ -271,7 +273,7 @@ def process_summary_call(post):
       #log("INTERPRETATION FAIL: %s"%filter(lambda x: x in string.printable, term))
       try:
 	terms = "\""+term+"\""
-	suggesttitle = str(wikipedia.search(terms,results=1)[0])
+	suggesttitle = str(wikia.search(terms,results=1)[0])
 	#log("SUGGESTING: %s"%filter(lambda x: x in string.printable, suggesttitle))
 	if suggesttitle.lower() == term:
 	  bit_comment_start = ""
@@ -281,7 +283,7 @@ def process_summary_call(post):
 	  suggesttitle = suggesttitle[0:--(suggesttitle.__len__()-1)]
 	return (str(suggesttitle),bit_comment_start)
       except:
-	trialtitle = wikipedia.page(term,auto_suggest=True).title
+	trialtitle = wikia.page(term,auto_suggest=True).title
 	if trialtitle.lower() == term:
 	  bit_comment_start = ""
 	else:
@@ -490,7 +492,7 @@ while True:
 	    if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
 	      deflist = ">Definitions for few of those terms:"
 	      for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-		deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
+		deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(val,auto_suggest=False,sentences=1)
 		if idx > 3:
 		  break
 	      summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
@@ -516,7 +518,7 @@ while True:
 	  sectionname = sectionname.strip().replace('.','%')
 	  sectionname = urllib.unquote(str(sectionname))
 	  try:
-	    url = ("https://en.wikipedia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
+	    url = ("https://en.wikia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
 	    socket.setdefaulttimeout(30)
 	    slsoup = BeautifulSoup(urllib2.urlopen(url).read())
 	    if slsoup.find_all('s').__len__() == 0:
@@ -524,9 +526,9 @@ while True:
 	    for s in slsoup.find_all('s'):
 	      if s['anchor'] == sectionnameraw:
 		section = str(s['index'])
-		bit_comment_start = "Section "+section+". [**"+sectionname.decode('utf-8','ignore').replace('_',' ')+"**](https://en.wikipedia.org/wiki/"+url_string+") of article "
+		bit_comment_start = "Section "+section+". [**"+sectionname.decode('utf-8','ignore').replace('_',' ')+"**](https://en.wikia.org/wiki/"+url_string+") of article "
 		url_string = pagenameraw
-		url = ("https://en.wikipedia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=images&section="+section)
+		url = ("https://en.wikia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=images&section="+section)
 		sisoup = BeautifulSoup(urllib2.urlopen(url).read())
 		try:
 		  page_image = sisoup.img.text
@@ -553,7 +555,7 @@ while True:
 	  
 	  if article_name_terminal == None and not summary_call:
 	    #log("MALFORMATTED LINK")
-	    #notify = '*Hey '+post.author.name+', that Wikipedia link is probably malformatted.*\n\n---\n\n'
+	    #notify = '*Hey '+post.author.name+', that Wikia link is probably malformatted.*\n\n---\n\n'
 	    #post_reply(notify,post)
 	    continue
 	  log("ARTICLE: %s / SECTION #%s @ %s"%(filter(lambda x: x in string.printable, article_name_terminal),section,post.id))
@@ -573,7 +575,7 @@ while True:
 	  ### In case user comments like "/wiki/Article.", remove last 1 letter
 	  if url_string_for_fetch.endswith(".") or url_string_for_fetch.endswith("]"):
 	    url_string_for_fetch = url_string_for_fetch[0:--(url_string_for_fetch.__len__()-1)]
-	  url = ("https://en.wikipedia.org/w/api.php?action=query&titles="+url_string_for_fetch+"&prop=pageprops&format=xml")
+	  url = ("https://en.wikia.org/w/api.php?action=query&titles="+url_string_for_fetch+"&prop=pageprops&format=xml")
 	  try:
 	    socket.setdefaulttimeout(30)
 	    pagepropsdata = urllib2.urlopen(url).read()
@@ -598,13 +600,13 @@ while True:
 	  
 	  if article_name_terminal == None and not summary_call:
 	    #log("MALFORMATTED LINK")
-	    #notify = '*Hey '+post.author.name+', that Wikipedia link is probably malformatted.*'
+	    #notify = '*Hey '+post.author.name+', that Wikia link is probably malformatted.*'
 	    #post_reply(notify,post)
 	    continue
 	  
 	
-	### fetch data from wikipedia
-	url = ("https://en.wikipedia.org/w/api.php?action=parse&page="+url_string_for_fetch+"&format=xml&prop=text&section="+str(section)+"&redirects")
+	### fetch data from wikia
+	url = ("https://en.wikia.org/w/api.php?action=parse&page="+url_string_for_fetch+"&format=xml&prop=text&section="+str(section)+"&redirects")
 	try:
 	  socket.setdefaulttimeout(30)
 	  sectiondata = urllib2.urlopen(url).read()
@@ -633,7 +635,7 @@ while True:
 		    tag.replace_with('')
 		    continue
 		  elif re.search('/wiki/',tag['href']):
-		    urlstart = "https://en.wikipedia.org"
+		    urlstart = "https://en.wikia.org"
 		  elif re.search('#',tag['href']):
 		    tag.unwrap()
 		    continue
@@ -659,7 +661,7 @@ while True:
 		  tag.replace_with('')
 		  continue
 		elif re.search('/wiki/',tag['href']):
-		  urlstart = "https://en.wikipedia.org"
+		  urlstart = "https://en.wikia.org"
 		elif re.search('#',tag['href']):
 		  tag.unwrap()
 		  continue
@@ -674,18 +676,18 @@ while True:
 	  if summary_call:
 	    try:
 	      term = url_string
-	      tell_me_text = wikipedia.summary(term,auto_suggest=False,redirect=True)
-	      tell_me_link = wikipedia.page(term,auto_suggest=False).url
-	      title = wikipedia.page(term,auto_suggest=False).title
+	      tell_me_text = wikia.summary(term,auto_suggest=False,redirect=True)
+	      tell_me_link = wikia.page(term,auto_suggest=False).url
+	      title = wikia.page(term,auto_suggest=False).title
 	      if bool(re.search(title,tell_me_text)):
 		summary = re.sub(title,"[**"+title+"**]("+tell_me_link+")",tell_me_text)
 	      else:
 		summary = "[**"+title+"**](" + tell_me_link + "): " + tell_me_text 
 	      #log("INTERPRETATION: %s"%filter(lambda x: x in string.printable, title))
 	      if re.search(r'#',title):
-		summary = wikipedia.page(title.split('#')[0]).section(title.split('#')[1])
+		summary = wikia.page(title.split('#')[0]).section(title.split('#')[1])
 		if summary == None or str(filter(lambda x: x in string.printable, summary)).strip() == "":
-		  page_url = wikipedia.page(title.split('#')[0]).url
+		  page_url = wikia.page(title.split('#')[0]).url
 		  summary = "Sorry, I failed to fetch the section, but here's the link: "+page_url+"#"+title.split('#')[1]
 	      if re.search(r'(',page_url):
 		page_url = process_brackets_links(page_url)
@@ -696,7 +698,7 @@ while True:
 	      if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
 		deflist = ">Definitions for few of those terms:"
 		for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-		  deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
+		  deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(val,auto_suggest=False,sentences=1)
 		  if idx > 3:
 		    break
 		#comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
@@ -706,12 +708,12 @@ while True:
 		#log("INTERPRETATION FAIL: %s"%term)
 		try:
 		  terms = "\""+term+"\""
-		  suggest = wikipedia.search(terms,results=1)[0]
-		  trialsummary = wikipedia.summary(suggest,auto_suggest=True)
+		  suggest = wikia.search(terms,results=1)[0]
+		  trialsummary = wikia.summary(suggest,auto_suggest=True)
 		  comment = "*Nearest match for* ***"+term.trim()+"*** *is* ***"+suggest+"*** :\n\n---\n\n>"+trialsummary+"\n\n---\n\n"
 		  #log("SUGGESTING %s"%suggest)
 		except:
-		  comment = "*Sorry, couldn't find a wikipedia article about that or maybe I couldn't process that due to Wikipedia server errors.*\n\n---\n\n"
+		  comment = "*Sorry, couldn't find a wikia article about that or maybe I couldn't process that due to Wikia server errors.*\n\n---\n\n"
 		  #log("COULD NOT SUGGEST FOR %s"%term)
 		post_reply(comment,post)
 		continue
@@ -724,7 +726,7 @@ while True:
 	  continue
 	#success("TEXT PACKAGED")
 	
-	### Fetch page image from wikipedia
+	### Fetch page image from wikia
 	try:
 	  ### Extract image url
 	  try:
@@ -733,7 +735,7 @@ while True:
 	    raise Exception("no page image")
 	  if page_image.endswith("ogg") or page_image == "":
 	    raise Exception("no image")
-	  url = ("https://en.wikipedia.org/w/api.php?action=query&titles=File:"+page_image+"&prop=imageinfo&iiprop=url|mediatype&iiurlwidth=640&format=xml")
+	  url = ("https://en.wikia.org/w/api.php?action=query&titles=File:"+page_image+"&prop=imageinfo&iiprop=url|mediatype&iiurlwidth=640&format=xml")
 	  socket.setdefaulttimeout(30)
 	  wi_api_data = urllib2.urlopen(url).read()
 	  wisoup = BeautifulSoup(wi_api_data)
@@ -783,14 +785,14 @@ while True:
 	  
 	###Interesting articles
 	try:
-	  intlist = wikipedia.search(article_name_terminal,results=5)
+	  intlist = wikia.search(article_name_terminal,results=5)
 	  if intlist.__len__() > 1:
 	    if article_name_terminal in intlist:
 	      intlist.remove(article_name_terminal)
 	    interesting_list = ""
 	    for topic in intlist:
 	      try:
-		topicurl = wikipedia.page(topic,auto_suggest=False).url.replace('(','\(').replace(')','\)')
+		topicurl = wikia.page(topic,auto_suggest=False).url.replace('(','\(').replace(')','\)')
 	      except:
 		continue
 	      topic = topic.replace(' ',' ^').replace(' ^(',' ^\(')
@@ -817,7 +819,7 @@ while True:
 	else:
 	  nsfwtag = " [](#sfw)"
 	
-	post_markdown = bit_comment_start+" [**"+article_name_terminal+"**](https://en.wikipedia.org/wiki/"+url_string_for_fetch.replace(')','\)')+"):"+nsfwtag+" \n\n---\n\n>"+data+"\n\n>"+image_markdown+"\n\n---\n\n"+interesting_markdown+"\n\n"
+	post_markdown = bit_comment_start+" [**"+article_name_terminal+"**](https://en.wikia.org/wiki/"+url_string_for_fetch.replace(')','\)')+"):"+nsfwtag+" \n\n---\n\n>"+data+"\n\n>"+image_markdown+"\n\n---\n\n"+interesting_markdown+"\n\n"
 	a = post_reply(post_markdown,post)
 	image_markdown = ""
 	if not a:
