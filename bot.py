@@ -9,7 +9,7 @@ except ImportError:
     from urllib import unquote
 
 BASE_URL = "wikia.com/wiki/"
-REPLY_MESSAGE = "^(Want to help make this better? Check out the source code at https://github.com/Timidger/WikiaBot)"
+REPLY_MESSAGE = "^(Want to help make this better? Check out the) [^source ^code](https://github.com/Timidger/WikiaBot)"
 
 
 bot = praw.Reddit("Wikia Bot: The wikia version of autowikipedia bot")
