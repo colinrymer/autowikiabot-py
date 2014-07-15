@@ -9,7 +9,7 @@ except ImportError:
     from urllib import unquote
 
 BASE_URL = "wikia.com/wiki/"
-REPLY_MESSAGE = "^(Want to help make this better? Check out the [source code](https://github.com/Timidger/WikiaBot))"
+REPLY_MESSAGE = "^(Want to help make this better? Check out the source code at https://github.com/Timidger/WikiaBot)"
 
 
 bot = praw.Reddit("Wikia Bot: The wikia version of autowikipedia bot")
@@ -48,8 +48,8 @@ def find_link(body):
             end_index = index + begin_index
             break
     else:
-        end_index = index
-    link = body[begin_index:end_index + 1]
+        end_index = begin_index + index
+    link = body[begin_index: end_index]
     return link
 
 def find_title(link):
@@ -75,6 +75,7 @@ def get_message(title, link, summary):
                               "---",
                               ">{body}",
                               "---",
+                              REPLY_MESSAGE,
                             ))
     return BASE_MESSAGE.format(title=title, link=link, body=summary)
                    
@@ -96,5 +97,4 @@ while True:
     # Just gotta keep chugging along
     except Exception as e:
         fail(e)
-        if not link:
-            print(post.body)
+        print(post.body)
