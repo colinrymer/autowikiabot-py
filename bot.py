@@ -74,15 +74,19 @@ def get_message(title, link, summary):
                    
 
 while True:
-    for post in praw.helpers.comment_stream(bot, sub_reddit, limit=None, verbosity=0):
-        if BASE_URL in post.body and check_user(post.author.name) and not_posted(post):
-            print("Found a post to reply to!")
-            link = find_link(post.body)
-            print("Link: ", link)
-            title = find_title(link)
-            print("Title: ", title)
-            sub_wikia = find_sub_wikia(link)
-            print("Sub-Wikia:", sub_wikia)
-            summary = wikia.summary(title, sub_wikia)
-            message = get_message(title, link, summary) 
-            post.reply(message)
+    try:
+        for post in praw.helpers.comment_stream(bot, sub_reddit, limit=None, verbosity=0):
+            if BASE_URL in post.body and check_user(post.author.name) and not_posted(post):
+                print("Found a post to reply to!")
+                link = find_link(post.body)
+                print("Link: ", link)
+                title = find_title(link)
+                print("Title: ", title)
+                sub_wikia = find_sub_wikia(link)
+                print("Sub-Wikia:", sub_wikia)
+                summary = wikia.summary(title, sub_wikia)
+                message = get_message(title, link, summary) 
+                post.reply(message)
+    # Just gotta keep chugging along
+    except Exception as e:
+        print(e)
