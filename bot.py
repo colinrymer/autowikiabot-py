@@ -1,6 +1,12 @@
+#! /usr/bin/env python2
 import praw
 from wikia import wikia
+from util import *
 import sys
+try:
+    from urllib.parse import unquote
+except ImportError:
+    from urllib import unquote
 
 BASE_URL = "wikia.com/wiki/"
 REPLY_MESSAGE = "^(Want to help make this better? Check out the [source code](https://github.com/Timidger/WikiaBot))"
@@ -37,9 +43,9 @@ def not_posted(post):
 
 def find_link(body):
     begin_index = body.find("http://")
-    for index, char in enumerate(body):
+    for index, char in enumerate(body[begin_index:]):
         if char in (" ", ")"):
-            end_index = index
+            end_index = index + begin_index
             break
     else:
         end_index = index
@@ -50,7 +56,8 @@ def find_title(link):
     begin_index = link.find(BASE_URL)
     title = link[begin_index:].partition(BASE_URL)[-1]
     # Translate from a title in a url to a proper title
-    title = title.replace("%27", "'")
+    title = unquote(title)
+    title = title.replace("-", " ")
     title = title.replace("_", " ")
     return title
 
@@ -61,7 +68,6 @@ def find_sub_wikia(link):
     if wikia.LANG:
         start_index = end_index
         end_index = link.find(".", start_index + 1)
-    print(start_index, end_index)
     return link[start_index:end_index]
 
 def get_message(title, link, summary):
@@ -89,4 +95,6 @@ while True:
                 post.reply(message)
     # Just gotta keep chugging along
     except Exception as e:
-        print(e)
+        fail(e)
+        if not link:
+            print(post.body)
