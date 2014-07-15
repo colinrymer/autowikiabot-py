@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 from HTMLParser import HTMLParser
 
 WIKI_URL = 'wikia.com/wiki'
-wikia.set_subwikia(sys.argv[2])
 ### Uncomment to debug
 #import logging
 #logging.basicConfig(level=logging.DEBUG)
@@ -16,6 +15,16 @@ wikia.set_subwikia(sys.argv[2])
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
+
+def find_sub_wikia(link):
+    # Just after http://, maybe should be more explicit here
+    start_index = link.find("//") + 2
+    end_index = link.find(".")
+    if wikia.LANG:
+        start_index = end_index
+        end_index = link.find(".", start_index + 1)
+    print(start_index, end_index)
+    return link[start_index:end_index]
 
 ###Load data
 def load_data():
@@ -69,8 +78,8 @@ def save_changing_variables(editsummary):
   for item in summon_only_subs:
     c_summon_only_subs = "    "+item+'\n'+c_summon_only_subs
   r.edit_wiki_page('autowikibot','summononlysubs',c_summon_only_subs,editsummary)
-  
-  
+
+
   success("DATA SAVED")
 
 with open ('datafile.inf', 'r') as myfile:
@@ -82,17 +91,17 @@ USERNAME = datafile_lines[0].strip()
 PASSWORD = datafile_lines[1].strip()
 Trying = True
 while Trying:
-	try:
-		r.login(USERNAME, PASSWORD)
-		success("LOGGED IN")
-		Trying = False
-	except praw.errors.InvalidUserPass:
-		fail("WRONG USERNAME OR PASSWORD")
-		exit()
-	except Exception as e:
-	  fail("%s"%e)
-	  time.sleep(5)
-    
+        try:
+                r.login(USERNAME, PASSWORD)
+                success("LOGGED IN")
+                Trying = False
+        except praw.errors.InvalidUserPass:
+                fail("WRONG USERNAME OR PASSWORD")
+                exit()
+        except Exception as e:
+          fail("%s"%e)
+          time.sleep(5)
+
 def is_summon_chain(post):
   if not post.is_root:
     parent_comment_id = post.parent_id
@@ -103,7 +112,7 @@ def is_summon_chain(post):
       return False
   else:
     return False
-  
+
 def comment_limit_reached(post):
   global submissioncount
   count_of_this = int(float(submissioncount[str(post.submission.id)]))
@@ -111,7 +120,7 @@ def comment_limit_reached(post):
     return True
   else:
     return False
-  
+
 def is_already_done(post):
   done = False
   numofr = 0
@@ -123,9 +132,9 @@ def is_already_done(post):
   if numofr != 0:
     for repl in post.replies:
       if repl.author != None and (repl.author.name == 'autowikibot' or repl.author.name == 'Text_Reader_Bot'):
-	warn("%s IS ALREADY DONE"%post.id)
-	done = True
-	continue
+        warn("%s IS ALREADY DONE"%post.id)
+        done = True
+        continue
   if done:
     return True
   else:
@@ -158,7 +167,7 @@ def post_reply(reply,post):
       fail(e)
       a.delete()
     return False
-	    
+
 def filterpass(post):
   global summary_call
   global has_link
@@ -190,11 +199,11 @@ def filterpass(post):
       return False
     elif comment_limit_reached(post):
       try:
-	title = "COMMENT LIMIT " + "/r/"+str(post.subreddit)
-	suburl = str(post.submission.short_link)
-	r.submit('acini',title,url=suburl)
+        title = "COMMENT LIMIT " + "/r/"+str(post.subreddit)
+        suburl = str(post.submission.short_link)
+        r.submit('acini',title,url=suburl)
       except:
-	pass
+        pass
       return False
     else:
       return True
@@ -211,7 +220,7 @@ def get_url_string(post):
     return after_split
   except:
     pass
-   
+
 def process_summary_call(post):
   #special("__________________________________________________")
   #special("SUMMARY CALL: %s"%post.id)
@@ -224,7 +233,7 @@ def process_summary_call(post):
     term = post_body.strip()
   elif re.search("\?\-.*\-\?",replacedbody):
     term = re.search("\?\-.*\-\?",post.body.lower()).group(0).strip('?').strip('-').strip()
-    
+
   special("SUMMARY CALL: %s @ %s"%(filter(lambda x: x in string.printable, term),post.id))
   if term.lower().strip() == 'love':
     #post_reply('*Baby don\'t hurt me! Now seriously, stop asking me about love so many times! O.o What were we discussing about in this thread again?*',post)
@@ -244,10 +253,10 @@ def process_summary_call(post):
       bit_comment_start = ""
     elif title.lower() != term:
       try:
-	discard = wikia.page(term,auto_suggest=False,redirect=False).title
+        discard = wikia.page(term,auto_suggest=False,redirect=False).title
       except Exception as e:
-	if re.search('resulted in a redirect',str(e)):
-	  bit_comment_start = "*\"" + term.strip() + "\" redirects to* "
+        if re.search('resulted in a redirect',str(e)):
+          bit_comment_start = "*\"" + term.strip() + "\" redirects to* "
     else:
       bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
     if re.search(r'#',title):
@@ -264,34 +273,34 @@ def process_summary_call(post):
     if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
       deflist = ">Definitions for few of those terms:"
       for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-	deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(val,auto_suggest=False,sentences=1)
-	if idx > 3:
-	  break
+        deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,auto_suggest=False,sentences=1)
+        if idx > 3:
+          break
       summary = "*Oops,* ***"+term.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
       #log("ASKING FOR DISAMBIGUATION")
     else:
       #log("INTERPRETATION FAIL: %s"%filter(lambda x: x in string.printable, term))
       try:
-	terms = "\""+term+"\""
-	suggesttitle = str(wikia.search(terms,results=1)[0])
-	#log("SUGGESTING: %s"%filter(lambda x: x in string.printable, suggesttitle))
-	if suggesttitle.lower() == term:
-	  bit_comment_start = ""
-	else:
-	  bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
-	if str(suggesttitle).endswith(')') and not re.search('\(',str(suggesttitle)):
-	  suggesttitle = suggesttitle[0:--(suggesttitle.__len__()-1)]
-	return (str(suggesttitle),bit_comment_start)
+        terms = "\""+term+"\""
+        suggesttitle = str(wikia.search(sub_wikia, terms,results=1)[0])
+        #log("SUGGESTING: %s"%filter(lambda x: x in string.printable, suggesttitle))
+        if suggesttitle.lower() == term:
+          bit_comment_start = ""
+        else:
+          bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
+        if str(suggesttitle).endswith(')') and not re.search('\(',str(suggesttitle)):
+          suggesttitle = suggesttitle[0:--(suggesttitle.__len__()-1)]
+        return (str(suggesttitle),bit_comment_start)
       except:
-	trialtitle = wikia.page(term,auto_suggest=True).title
-	if trialtitle.lower() == term:
-	  bit_comment_start = ""
-	else:
-	  bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
-	#log("TRIAL SUGGESTION: %s"%filter(lambda x: x in string.printable, trialtitle))  
-	if str(trialtitle).endswith(')') and not re.search('\(',str(trialtitle)):
-	  trialtitle = trialtitle[0:--(trialtitle.__len__()-1)]
-	return (str(trialtitle),bit_comment_start)
+        trialtitle = wikia.page(term,auto_suggest=True).title
+        if trialtitle.lower() == term:
+          bit_comment_start = ""
+        else:
+          bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
+        #log("TRIAL SUGGESTION: %s"%filter(lambda x: x in string.printable, trialtitle))
+        if str(trialtitle).endswith(')') and not re.search('\(',str(trialtitle)):
+          trialtitle = trialtitle[0:--(trialtitle.__len__()-1)]
+        return (str(trialtitle),bit_comment_start)
     post_reply(summary,post)
     return (False,False)
 
@@ -308,7 +317,7 @@ def clean_soup(soup):
     discard = soup.find("span", { "class" : "t_nihongo_help noprint" }).extract()
   while soup.find("span", { "class" : "sortkey" }):
     discard = soup.find("span", { "class" : "sortkey" }).extract()
-  
+
   for tag in soup:
     if tag.name == 'a' and tag.has_attr('href'):
       rep = "["+tag.text+"]("+tag['href']+")"
@@ -359,7 +368,7 @@ def truncate(data, length):
     return data
   else:
     return data
-  
+
 def process_brackets_links(string):
   string = ("%s)"%string)
   string = string.replace("\\", "")
@@ -369,7 +378,7 @@ def process_brackets_syntax(string):
   string = string.replace("\\", "")
   string = ("%s\)"%string)
   return string
-  
+
 ### declare variables
 load_data()
 im = pyimgur.Imgur(imgur_client_id)
@@ -384,454 +393,455 @@ while True:
     #comments = r.get_comments("all",limit = 1000)
     #for post in comments:
     for post in praw.helpers.comment_stream(r,str(sys.argv[1]), limit = None, verbosity=0):
-      
+
       ### Dirty timer hack
       now = int(float(time.strftime("%s")))
       diff = now - lastload
       if diff > 899:
-	banned_users = banned_users_page.content_md.strip().split()
-	bluelog("BANNED USER LIST RENEWED")
-	save_changing_variables('scheduled dump')
-	lastload = now
-      
+        banned_users = banned_users_page.content_md.strip().split()
+        bluelog("BANNED USER LIST RENEWED")
+        save_changing_variables('scheduled dump')
+        lastload = now
+
       if filterpass(post):
-	if mod_switch:
-	  try:
-	    mod_switch_summon_on = re.search(r'wikibot moderator switch: summon only: on',post.body.lower())
-	    mod_switch_summon_off = re.search(r'wikibot moderator switch: summon only: off',post.body.lower())
-	    mod_switch_root_on = re.search(r'wikibot moderator switch: root only: on',post.body.lower())
-	    mod_switch_root_off = re.search(r'wikibot moderator switch: root only: off',post.body.lower())
-	    
-	    mods = r.get_moderators(str(post.subreddit))
-	    is_mod = False
-	    for idx in range(0,len(mods)):
-	      if mods[idx].name == post.author.name:
-		is_mod = True
-		break
-	    if is_mod:
-	      if mod_switch_summon_on:
-		if str(post.subreddit) in summon_only_subs:
-		  comment = "*Summon only feature is already* ***ON*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-		  summon_only_subs.append(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'added '+str(post.subreddit)+', reason:mod_switch_summon_on'
-		  save_changing_variables(editsummary)
-		  comment = "*Summon only feature switched* ***ON*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      elif mod_switch_summon_off:
-		if str(post.subreddit) not in summon_only_subs:
-		  comment = "*Summon only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-		  badsubs = badsubs_page.content_md.strip().split()
-		  summon_only_subs.remove(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'removed '+str(post.subreddit)+', reason:mod_switch_summon_off'
-		  save_changing_variables(editsummary)
-		  comment = "*Summon only feature switched* ***OFF*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      elif mod_switch_root_on:
-		if str(post.subreddit) in root_only_subs:
-		  comment = "*Root only feature is already* ***ON*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-		  root_only_subs.append(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'added '+str(post.subreddit)+', reason:mod_switch_root_on'
-		  save_changing_variables(editsummary)
-		  comment = "*Root only feature switched* ***ON*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      elif mod_switch_root_off:
-		if str(post.subreddit) not in root_only_subs:
-		  comment = "*Root only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-		  badsubs = badsubs_page.content_md.strip().split()
-		  root_only_subs.remove(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'removed '+str(post.subreddit)+', reason:mod_switch_root_off'
-		  save_changing_variables(editsummary)
-		  comment = "*Root only feature switched* ***OFF*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      else:
-		comment = False
-	      
-	      if comment:
-		a = post_reply(comment,post)
-		title = "MODSWITCH: %s"%str(post.subreddit)
-		subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
-		r.submit('acini',title,text=subtext)
-	      if a:
-		special("MODSWITCH: %s @ %s"%(comment.replace('*',''),post.id))
-	      else:
-		fail("MODSWITCH REPLY FAILED: %s @ %s"%(comment,post.id))
-		title = "MODSWITCH REPLY FAILED: %s"%str(post.subreddit)
-		subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
-		r.submit('acini',title,text=subtext)
-	    else:
-	      if post.subreddit not in badsubs:
-		comment = "*Moderator switches can only be switched ON and OFF by moderators of this subreddit.*\n\n*If you want specific feature turned ON or OFF, [ask the moderators](http://www.np.reddit.com/message/compose?to=%2Fr%2F"+str(post.subreddit)+") and provide them with [this link](http://www.np.reddit.com/r/autowikibot/wiki/modfaqs).*\n\n---\n\n"
-		post_reply(comment,post)
-	  except Exception as e:
-	    title = "MODSWITCH FAILURE !!: %s"%str(post.subreddit)
-	    traceback.print_exc()
-	    subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+str(e)
-	    r.submit('acini',title,text=subtext)
-	  continue
-	elif has_link:
-	  url_string = get_url_string(post)
-	  #log("__________________________________________________")
-	  #log("LINK TRIGGER: %s"%post.id)
-	  bit_comment_start = ""
-	else:
-	  try:
-	    url_string = ""
-	    url_string, bit_comment_start = process_summary_call(post)
-	    if url_string == False:
-	      continue
-	    url_string = str(url_string)
-	  except Exception as e:
-	    if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
-	      deflist = ">Definitions for few of those terms:"
-	      for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-		deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(val,auto_suggest=False,sentences=1)
-		if idx > 3:
-		  break
-	      summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-	      #log("ASKING FOR DISAMBIGUATION")
-	      post_reply(summary,post)
-	      continue
-	if not url_string:
-	  continue
-	
-	article_name_terminal = None
-	
-	is_section = False
-	### check for subheading in url string, process if present
-	if re.search(r"#",url_string) and not summary_call:
-	  pagenameraw = url_string.split('#')[0]
-	  pagename = pagenameraw.replace(')','\)')
-	  pagename = pagename.replace('(','\(')
-	  pagename = pagename.strip().replace('.','%')
-	  pagename = urllib.unquote(str(pagename))
-	  sectionnameraw = url_string.split('#')[1]
-	  sectionname = sectionnameraw.replace('(','\(')
-	  sectionname = sectionname.replace(')','\)')
-	  sectionname = sectionname.strip().replace('.','%')
-	  sectionname = urllib.unquote(str(sectionname))
-	  try:
-	    url = ("https://en.wikia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
-	    socket.setdefaulttimeout(30)
-	    slsoup = BeautifulSoup(urllib2.urlopen(url).read())
-	    if slsoup.find_all('s').__len__() == 0:
-	      raise Exception("no sections found")
-	    for s in slsoup.find_all('s'):
-	      if s['anchor'] == sectionnameraw:
-		section = str(s['index'])
-		bit_comment_start = "Section "+section+". [**"+sectionname.decode('utf-8','ignore').replace('_',' ')+"**](https://en.wikia.org/wiki/"+url_string+") of article "
-		url_string = pagenameraw
-		url = ("https://en.wikia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=images&section="+section)
-		sisoup = BeautifulSoup(urllib2.urlopen(url).read())
-		try:
-		  page_image = sisoup.img.text
-		except:
-		  page_image = ""
-		pic_markdown = "Image from section"
-		
-		while url_string.endswith('))'):
-		  url_string = url_string.replace('))',')')
-	  
-		url_string_for_fetch = url_string.replace('_', '%20').replace("\\", "")
-		url_string_for_fetch = url_string_for_fetch.replace(' ', '%20').replace("\\", "")
-		article_name = url_string.replace('_', ' ')
-		article_name_terminal = article_name.decode('utf-8','ignore')
-		### In case user comments like "/wiki/Article.", remove last 1 letter
-		if url_string_for_fetch.endswith(".") or url_string_for_fetch.endswith("]"):
-		  url_string_for_fetch = url_string_for_fetch[0:--(url_string_for_fetch.__len__()-1)]
-		is_section = True
-		break
-	  except Exception as e:
-	    #traceback.print_exc()
-	    fail(e)
-	    continue
-	  
-	  if article_name_terminal == None and not summary_call:
-	    #log("MALFORMATTED LINK")
-	    #notify = '*Hey '+post.author.name+', that Wikia link is probably malformatted.*\n\n---\n\n'
-	    #post_reply(notify,post)
-	    continue
-	  log("ARTICLE: %s / SECTION #%s @ %s"%(filter(lambda x: x in string.printable, article_name_terminal),section,post.id))
-	else:
-	  section = 0
-	  pic_markdown = "Image"
-	  while url_string.endswith('))'):
-	    url_string = url_string.replace('))',')')
-	    
-	  url_string_for_fetch = url_string.replace('_', '%20').replace("\\", "")
-	  url_string_for_fetch = url_string_for_fetch.replace(' ', '%20').replace("\\", "")
-	  article_name = url_string.replace('_', ' ')
-	  while url_string_for_fetch.endswith('))'):
-	    url_string_for_fetch = url_string_for_fetch.replace('))',')')
-	  
-	  
-	  ### In case user comments like "/wiki/Article.", remove last 1 letter
-	  if url_string_for_fetch.endswith(".") or url_string_for_fetch.endswith("]"):
-	    url_string_for_fetch = url_string_for_fetch[0:--(url_string_for_fetch.__len__()-1)]
-	  url = ("https://en.wikia.org/w/api.php?action=query&titles="+url_string_for_fetch+"&prop=pageprops&format=xml")
-	  try:
-	    socket.setdefaulttimeout(30)
-	    pagepropsdata = urllib2.urlopen(url).read()
-	    pagepropsdata = pagepropsdata.decode('utf-8','ignore')
-	    ppsoup = BeautifulSoup(pagepropsdata)
-	    article_name_terminal = ppsoup.page['title']
-	  except:
-	    try:
-	      article_name_terminal = article_name.replace('\\', '')
-	    except:
-	      article_name_terminal = article_name.replace('\\', '').decode('utf-8','ignore')
-	      
-	  article_name_terminal = urllib.unquote(article_name_terminal)
-	  while article_name_terminal.endswith('))'):
-	    article_name_terminal = article_name_terminal.replace('))',')')
-	  log("ARTICLE: %s @ %s"%(filter(lambda x: x in string.printable, article_name_terminal),post.id))
-      
-	  try:
-	    page_image = ppsoup.pageprops["page_image"]
-	  except:
-	    page_image = ""
-	  
-	  if article_name_terminal == None and not summary_call:
-	    #log("MALFORMATTED LINK")
-	    #notify = '*Hey '+post.author.name+', that Wikia link is probably malformatted.*'
-	    #post_reply(notify,post)
-	    continue
-	  
-	
-	### fetch data from wikia
-	url = ("https://en.wikia.org/w/api.php?action=parse&page="+url_string_for_fetch+"&format=xml&prop=text&section="+str(section)+"&redirects")
-	try:
-	  socket.setdefaulttimeout(30)
-	  sectiondata = urllib2.urlopen(url).read()
-	  sectiondata = sectiondata.decode('utf-8','ignore')
-	  sectiondata = reddify(sectiondata)
-	  soup = BeautifulSoup(sectiondata)
-	  soup = BeautifulSoup(soup.text)
-	  sectionnsoup = soup
-	except Exception as e:
-	  #fail("FETCH: %s"%e)
-	  continue
-	
-	soup = clean_soup(soup)
-	
-	### extract paragraph
-	try:
-	  if soup.p.text.__len__() < 500:
-	    all_p = soup.find_all('p')
-	    wt = ""
-	    for idx, val in enumerate(all_p):
-	      s = all_p[idx]
-	      for tag in s:
-		if tag.name == 'a' and tag.has_attr('href'):
-		  urlstart = ""
-		  if re.search('#cite',tag['href']):
-		    tag.replace_with('')
-		    continue
-		  elif re.search('/wiki/',tag['href']):
-		    urlstart = "https://en.wikia.org"
-		  elif re.search('#',tag['href']):
-		    tag.unwrap()
-		    continue
-		  elif not re.search(r'^http://',tag['href']):
-		    tag.replace_with(tag.text)
-		    continue
-		  rep = "["+tag.text+"]("+urlstart+tag['href'].replace(')','\)')+")"
-		  discard = tag.replace_with(rep)
-	      wt = (wt+"\n\n>"+s.text)                                      # Post 3 paragraphs
-	      data = wt
-	      if has_list:
-		para = 100
-	      else:
-		para = 1
-	      if idx > para:
-		break
-	  else:
-	    s = soup.p
-	    for tag in s:
-	      if tag.name == 'a' and tag.has_attr('href'):
-		urlstart = ""
-		if re.search('#cite',tag['href']):
-		  tag.replace_with('')
-		  continue
-		elif re.search('/wiki/',tag['href']):
-		  urlstart = "https://en.wikia.org"
-		elif re.search('#',tag['href']):
-		  tag.unwrap()
-		  continue
-		elif not re.search(r'^http://',tag['href']):
-		  tag.replace_with(tag.text)
-		  continue
-		rep = "["+tag.text+"]("+urlstart+tag['href'].replace(')','\)')+")"
-		discard = tag.replace_with(rep)
-	    data = s.text                             #Post only first paragraph
-	except Exception as e:
-	  #fail("TEXT PACKAGE FAIL: %s"%e)
-	  if summary_call:
-	    try:
-	      term = url_string
-	      tell_me_text = wikia.summary(term,auto_suggest=False,redirect=True)
-	      tell_me_link = wikia.page(term,auto_suggest=False).url
-	      title = wikia.page(term,auto_suggest=False).title
-	      if bool(re.search(title,tell_me_text)):
-		summary = re.sub(title,"[**"+title+"**]("+tell_me_link+")",tell_me_text)
-	      else:
-		summary = "[**"+title+"**](" + tell_me_link + "): " + tell_me_text 
-	      #log("INTERPRETATION: %s"%filter(lambda x: x in string.printable, title))
-	      if re.search(r'#',title):
-		summary = wikia.page(title.split('#')[0]).section(title.split('#')[1])
-		if summary == None or str(filter(lambda x: x in string.printable, summary)).strip() == "":
-		  page_url = wikia.page(title.split('#')[0]).url
-		  summary = "Sorry, I failed to fetch the section, but here's the link: "+page_url+"#"+title.split('#')[1]
-	      if re.search(r'(',page_url):
-		page_url = process_brackets_links(page_url)
-	      comment = "*Here you go:*\n\n---\n\n>\n"+summary+"\n\n---\n\n"
-	      post_reply(comment,post)
-	      continue
-	    except Exception as e:
-	      if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
-		deflist = ">Definitions for few of those terms:"
-		for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-		  deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(val,auto_suggest=False,sentences=1)
-		  if idx > 3:
-		    break
-		#comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
-		summary = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-		#log("ASKING FOR DISAMBIGUATION")
-	      else:
-		#log("INTERPRETATION FAIL: %s"%term)
-		try:
-		  terms = "\""+term+"\""
-		  suggest = wikia.search(terms,results=1)[0]
-		  trialsummary = wikia.summary(suggest,auto_suggest=True)
-		  comment = "*Nearest match for* ***"+term.trim()+"*** *is* ***"+suggest+"*** :\n\n---\n\n>"+trialsummary+"\n\n---\n\n"
-		  #log("SUGGESTING %s"%suggest)
-		except:
-		  comment = "*Sorry, couldn't find a wikia article about that or maybe I couldn't process that due to Wikia server errors.*\n\n---\n\n"
-		  #log("COULD NOT SUGGEST FOR %s"%term)
-		post_reply(comment,post)
-		continue
-	  continue
-	data = strip_wiki(data)
-	data = re.sub("Cite error: There are ref tags on this page, but the references will not show without a \{\{reflist\}\} template \(see the help page\)\.", '', data)
-	#truncateddata = truncate(data,1000)
-	if data.__len__() < 50:
-	  #log("TOO SMALL INTRODUCTION PARAGRAPH")
-	  continue
-	#success("TEXT PACKAGED")
-	
-	### Fetch page image from wikia
-	try:
-	  ### Extract image url
-	  try:
-	    page_image = urllib.unquote(page_image.decode('utf-8','ignore'))
-	  except:
-	    raise Exception("no page image")
-	  if page_image.endswith("ogg") or page_image == "":
-	    raise Exception("no image")
-	  url = ("https://en.wikia.org/w/api.php?action=query&titles=File:"+page_image+"&prop=imageinfo&iiprop=url|mediatype&iiurlwidth=640&format=xml")
-	  socket.setdefaulttimeout(30)
-	  wi_api_data = urllib2.urlopen(url).read()
-	  wisoup = BeautifulSoup(wi_api_data)
-	  image_url = wisoup.ii['thumburl']
-	  image_source_url = wisoup.ii['descriptionurl']
-	  image_source_url = re.sub(r'\)','\)',image_source_url)
-	  image_source_url = re.sub(r'\(','\(',image_source_url)
-	  global image_source_markdown
-	  image_source_markdown = ("[^(i)]("+image_source_url+")")
-	  
-	  ### Upload to imgur
-	  uploaded_image = im.upload_image(url=image_url, title=page_image)
-	  
-	  ### Extract caption from already fetched sectiondata
-	  try:
-	    caption_div = sectionnsoup.find("div", { "class" : "thumbcaption" })
-	    if caption_div is None:
-	      raise Exception("caption not packaged: no caption found in section 0")
-	    if page_image not in str(caption_div.find("div", { "class" : "magnify" })):
-	      raise Exception("caption not packaged: page image not in section 0")
-	    discard = caption_div.find("div", { "class" : "magnify" }).extract()
-	    caption = caption_div.text.strip()
-	    caption = strip_wiki(caption)
-	    caption = re.sub(r'\)','\)',caption)
-	    caption = re.sub(r'\(','\(',caption)
-	    caption = re.sub(r'\*','',caption)
-	    caption = re.sub(r'\n',' ',caption)
-	    if caption != "":
-	      caption_markdown = (" - *"+caption+"*")
-	      caption_div = None
-	      #success("CAPTION PACKAGED")
-	    else:
-	      raise Exception("caption not packaged: no caption found in section 0")
-	  except Exception as e:
-	    if str(e) == "caption not packaged: page image has no caption":
-	      pic_markdown = "Image"
-	    elif str(e) == "caption not packaged: page image not in section 0":
-	      pic_markdown = "Image from article"
-	    caption_markdown = ""
-	    #log(e)
-	  image_markdown = ("====\n\n>[**"+pic_markdown+"**]("+uploaded_image.link.replace('http://','https://')+") "+image_source_markdown+caption_markdown)
-	  #success("IMAGE PACKAGED VIA %s"%uploaded_image.link)
-	except Exception as e:
-	  image_markdown = ""
-	  #traceback.print_exc()
-	  #log("IMAGE: %s"%str(e).strip().replace('\n',''))
-	  
-	###Interesting articles
-	try:
-	  intlist = wikia.search(article_name_terminal,results=5)
-	  if intlist.__len__() > 1:
-	    if article_name_terminal in intlist:
-	      intlist.remove(article_name_terminal)
-	    interesting_list = ""
-	    for topic in intlist:
-	      try:
-		topicurl = wikia.page(topic,auto_suggest=False).url.replace('(','\(').replace(')','\)')
-	      except:
-		continue
-	      topic = topic.replace(' ',' ^').replace(' ^(',' ^\(')
-	      interesting_list = interesting_list + " [^" + topic + "]" + "(" +topicurl.replace('http://','https://')+ ") ^|"
-	    interesting_markdown = "^Interesting:"+interesting_list.strip('^|')
-	    #success("%s INTERESTING ARTICLE LINKS PACKAGED"%intlist.__len__())
-	  else:
-	    raise Exception("no suggestions")
-	except Exception as e:
-	  interesting_markdown = ""
-	  #traceback.print_exc()
-	  #log("INTERESTING ARTICLE LINKS NOT PACKAGED: %s"%str(e).strip().replace('\n',''))
-	
-	###NSFW tagging
-	#badwords = getnsfw(data)
-	badwords = None #mark all articles as sfw for now
-	if badwords:
-	  badlist = ''
-	  for word in badwords:
-	    badlist = badlist + word + ',%20'
-	  nsfwurl = "http://www.np.reddit.com/message/compose?to=%28This%20is%20a%20placeholder%29/r/autowikibot&subject="+str(len(badwords))+"%20NSFW%20words%20are%20present%20in%20this%20comment:&message="+badlist.strip(',%20')+"%0a%0aIf%20you%20think%20any%20of%20word/s%20above%20is%20SFW,%20forward%20this%20message%20to%20/r/autowikibot%20%28keep%20the%20subject%20unchanged%29%0a%0acontext:"+str(post.permalink)
-	  nsfwtag = " [](#nsfw-start)**^NSFW** [^^(?)]("+nsfwurl+")[](#nsfw-end)"
-	  #success("FOUND %s NSFW WORDS"%str(len(badwords)))
-	else:
-	  nsfwtag = " [](#sfw)"
-	
-	post_markdown = bit_comment_start+" [**"+article_name_terminal+"**](https://en.wikia.org/wiki/"+url_string_for_fetch.replace(')','\)')+"):"+nsfwtag+" \n\n---\n\n>"+data+"\n\n>"+image_markdown+"\n\n---\n\n"+interesting_markdown+"\n\n"
-	a = post_reply(post_markdown,post)
-	image_markdown = ""
-	if not a:
-	  continue
-	
+        if mod_switch:
+          try:
+            mod_switch_summon_on = re.search(r'wikibot moderator switch: summon only: on',post.body.lower())
+            mod_switch_summon_off = re.search(r'wikibot moderator switch: summon only: off',post.body.lower())
+            mod_switch_root_on = re.search(r'wikibot moderator switch: root only: on',post.body.lower())
+            mod_switch_root_off = re.search(r'wikibot moderator switch: root only: off',post.body.lower())
+
+            mods = r.get_moderators(str(post.subreddit))
+            is_mod = False
+            for idx in range(0,len(mods)):
+              if mods[idx].name == post.author.name:
+                is_mod = True
+                break
+            if is_mod:
+              if mod_switch_summon_on:
+                if str(post.subreddit) in summon_only_subs:
+                  comment = "*Summon only feature is already* ***ON*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
+                else:
+                  summon_only_subs.append(str(post.subreddit))
+                  if str(post.subreddit) in badsubs:
+                    badsubs.remove(str(post.subreddit))
+                  editsummary = 'added '+str(post.subreddit)+', reason:mod_switch_summon_on'
+                  save_changing_variables(editsummary)
+                  comment = "*Summon only feature switched* ***ON*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
+              elif mod_switch_summon_off:
+                if str(post.subreddit) not in summon_only_subs:
+                  comment = "*Summon only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
+                else:
+                  badsubs = badsubs_page.content_md.strip().split()
+                  summon_only_subs.remove(str(post.subreddit))
+                  if str(post.subreddit) in badsubs:
+                    badsubs.remove(str(post.subreddit))
+                  editsummary = 'removed '+str(post.subreddit)+', reason:mod_switch_summon_off'
+                  save_changing_variables(editsummary)
+                  comment = "*Summon only feature switched* ***OFF*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
+              elif mod_switch_root_on:
+                if str(post.subreddit) in root_only_subs:
+                  comment = "*Root only feature is already* ***ON*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
+                else:
+                  root_only_subs.append(str(post.subreddit))
+                  if str(post.subreddit) in badsubs:
+                    badsubs.remove(str(post.subreddit))
+                  editsummary = 'added '+str(post.subreddit)+', reason:mod_switch_root_on'
+                  save_changing_variables(editsummary)
+                  comment = "*Root only feature switched* ***ON*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
+              elif mod_switch_root_off:
+                if str(post.subreddit) not in root_only_subs:
+                  comment = "*Root only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
+                else:
+                  badsubs = badsubs_page.content_md.strip().split()
+                  root_only_subs.remove(str(post.subreddit))
+                  if str(post.subreddit) in badsubs:
+                    badsubs.remove(str(post.subreddit))
+                  editsummary = 'removed '+str(post.subreddit)+', reason:mod_switch_root_off'
+                  save_changing_variables(editsummary)
+                  comment = "*Root only feature switched* ***OFF*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
+              else:
+                comment = False
+
+              if comment:
+                a = post_reply(comment,post)
+                title = "MODSWITCH: %s"%str(post.subreddit)
+                subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
+                r.submit('acini',title,text=subtext)
+              if a:
+                special("MODSWITCH: %s @ %s"%(comment.replace('*',''),post.id))
+              else:
+                fail("MODSWITCH REPLY FAILED: %s @ %s"%(comment,post.id))
+                title = "MODSWITCH REPLY FAILED: %s"%str(post.subreddit)
+                subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
+                r.submit('acini',title,text=subtext)
+            else:
+              if post.subreddit not in badsubs:
+                comment = "*Moderator switches can only be switched ON and OFF by moderators of this subreddit.*\n\n*If you want specific feature turned ON or OFF, [ask the moderators](http://www.np.reddit.com/message/compose?to=%2Fr%2F"+str(post.subreddit)+") and provide them with [this link](http://www.np.reddit.com/r/autowikibot/wiki/modfaqs).*\n\n---\n\n"
+                post_reply(comment,post)
+          except Exception as e:
+            title = "MODSWITCH FAILURE !!: %s"%str(post.subreddit)
+            traceback.print_exc()
+            subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+str(e)
+            r.submit('acini',title,text=subtext)
+          continue
+        elif has_link:
+          url_string = get_url_string(post)
+          #log("__________________________________________________")
+          #log("LINK TRIGGER: %s"%post.id)
+          bit_comment_start = ""
+        else:
+          try:
+            url_string = ""
+            url_string, bit_comment_start = process_summary_call(post)
+            if url_string == False:
+              continue
+            url_string = str(url_string)
+          except Exception as e:
+            if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
+              deflist = ">Definitions for few of those terms:"
+              for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
+                deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,auto_suggest=False,sentences=1)
+                if idx > 3:
+                  break
+              summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
+              #log("ASKING FOR DISAMBIGUATION")
+              post_reply(summary,post)
+              continue
+        if not url_string:
+          continue
+        article_name_terminal = None
+        sub_wikia = find_sub_wikia(url_string)
+
+        is_section = False
+        base_wikia_url = "https://en" + find_sub_wikia(url_string) + "wikia.com/wiki/"
+        ### check for subheading in url string, process if present
+        if re.search(r"#",url_string) and not summary_call:
+          pagenameraw = url_string.split('#')[0]
+          pagename = pagenameraw.replace(')','\)')
+          pagename = pagename.replace('(','\(')
+          pagename = pagename.strip().replace('.','%')
+          pagename = urllib.unquote(str(pagename))
+          sectionnameraw = url_string.split('#')[1]
+          sectionname = sectionnameraw.replace('(','\(')
+          sectionname = sectionname.replace(')','\)')
+          sectionname = sectionname.strip().replace('.','%')
+          sectionname = urllib.unquote(str(sectionname))
+          try:
+            url = (base_wikia_url+"api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
+            socket.setdefaulttimeout(30)
+            slsoup = BeautifulSoup(urllib2.urlopen(url).read())
+            if slsoup.find_all('s').__len__() == 0:
+              raise Exception("no sections found")
+            for s in slsoup.find_all('s'):
+              if s['anchor'] == sectionnameraw:
+                section = str(s['index'])
+                bit_comment_start = "Section "+section+". [**"+sectionname.decode('utf-8','ignore').replace('_',' ')+"**]("+base_wikia_url+url_string+") of article "
+                url_string = pagenameraw
+                url = (base_wikia_url+"api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=images&section="+section)
+                sisoup = BeautifulSoup(urllib2.urlopen(url).read())
+                try:
+                  page_image = sisoup.img.text
+                except:
+                  page_image = ""
+                pic_markdown = "Image from section"
+
+                while url_string.endswith('))'):
+                  url_string = url_string.replace('))',')')
+
+                url_string_for_fetch = url_string.replace('_', '%20').replace("\\", "")
+                url_string_for_fetch = url_string_for_fetch.replace(' ', '%20').replace("\\", "")
+                article_name = url_string.replace('_', ' ')
+                article_name_terminal = article_name.decode('utf-8','ignore')
+                ### In case user comments like "/wiki/Article.", remove last 1 letter
+                if url_string_for_fetch.endswith(".") or url_string_for_fetch.endswith("]"):
+                  url_string_for_fetch = url_string_for_fetch[0:--(url_string_for_fetch.__len__()-1)]
+                is_section = True
+                break
+          except Exception as e:
+            #traceback.print_exc()
+            fail(e)
+            continue
+
+          if article_name_terminal == None and not summary_call:
+            #log("MALFORMATTED LINK")
+            #notify = '*Hey '+post.author.name+', that Wikia link is probably malformatted.*\n\n---\n\n'
+            #post_reply(notify,post)
+            continue
+          log("ARTICLE: %s / SECTION #%s @ %s"%(filter(lambda x: x in string.printable, article_name_terminal),section,post.id))
+        else:
+          section = 0
+          pic_markdown = "Image"
+          while url_string.endswith('))'):
+            url_string = url_string.replace('))',')')
+
+          url_string_for_fetch = url_string.replace('_', '%20').replace("\\", "")
+          url_string_for_fetch = url_string_for_fetch.replace(' ', '%20').replace("\\", "")
+          article_name = url_string.replace('_', ' ')
+          while url_string_for_fetch.endswith('))'):
+            url_string_for_fetch = url_string_for_fetch.replace('))',')')
+
+
+          ### In case user comments like "/wiki/Article.", remove last 1 letter
+          if url_string_for_fetch.endswith(".") or url_string_for_fetch.endswith("]"):
+            url_string_for_fetch = url_string_for_fetch[0:--(url_string_for_fetch.__len__()-1)]
+          url = (base_wikia_url+"api.php?action=query&titles="+url_string_for_fetch+"&prop=pageprops&format=xml")
+          try:
+            socket.setdefaulttimeout(30)
+            pagepropsdata = urllib2.urlopen(url).read()
+            pagepropsdata = pagepropsdata.decode('utf-8','ignore')
+            ppsoup = BeautifulSoup(pagepropsdata)
+            article_name_terminal = ppsoup.page['title']
+          except:
+            try:
+              article_name_terminal = article_name.replace('\\', '')
+            except:
+              article_name_terminal = article_name.replace('\\', '').decode('utf-8','ignore')
+
+          article_name_terminal = urllib.unquote(article_name_terminal)
+          while article_name_terminal.endswith('))'):
+            article_name_terminal = article_name_terminal.replace('))',')')
+          log("ARTICLE: %s @ %s"%(filter(lambda x: x in string.printable, article_name_terminal),post.id))
+
+          try:
+            page_image = ppsoup.pageprops["page_image"]
+          except:
+            page_image = ""
+
+          if article_name_terminal == None and not summary_call:
+            #log("MALFORMATTED LINK")
+            #notify = '*Hey '+post.author.name+', that Wikia link is probably malformatted.*'
+            #post_reply(notify,post)
+            continue
+
+
+        ### fetch data from wikia
+        url = (base_wikia_url+"api.php?action=parse&page="+url_string_for_fetch+"&format=xml&prop=text&section="+str(section)+"&redirects")
+        try:
+          socket.setdefaulttimeout(30)
+          sectiondata = urllib2.urlopen(url).read()
+          sectiondata = sectiondata.decode('utf-8','ignore')
+          sectiondata = reddify(sectiondata)
+          soup = BeautifulSoup(sectiondata)
+          soup = BeautifulSoup(soup.text)
+          sectionnsoup = soup
+        except Exception as e:
+          #fail("FETCH: %s"%e)
+          continue
+
+        soup = clean_soup(soup)
+
+        ### extract paragraph
+        try:
+          if soup.p.text.__len__() < 500:
+            all_p = soup.find_all('p')
+            wt = ""
+            for idx, val in enumerate(all_p):
+              s = all_p[idx]
+              for tag in s:
+                if tag.name == 'a' and tag.has_attr('href'):
+                  urlstart = ""
+                  if re.search('#cite',tag['href']):
+                    tag.replace_with('')
+                    continue
+                  elif re.search('/wiki/',tag['href']):
+                    urlstart = "https://en.wikia.com"
+                  elif re.search('#',tag['href']):
+                    tag.unwrap()
+                    continue
+                  elif not re.search(r'^http://',tag['href']):
+                    tag.replace_with(tag.text)
+                    continue
+                  rep = "["+tag.text+"]("+urlstart+tag['href'].replace(')','\)')+")"
+                  discard = tag.replace_with(rep)
+              wt = (wt+"\n\n>"+s.text)                                      # Post 3 paragraphs
+              data = wt
+              if has_list:
+                para = 100
+              else:
+                para = 1
+              if idx > para:
+                break
+          else:
+            s = soup.p
+            for tag in s:
+              if tag.name == 'a' and tag.has_attr('href'):
+                urlstart = ""
+                if re.search('#cite',tag['href']):
+                  tag.replace_with('')
+                  continue
+                elif re.search('/wiki/',tag['href']):
+                  urlstart = "https://en.wikia.com"
+                elif re.search('#',tag['href']):
+                  tag.unwrap()
+                  continue
+                elif not re.search(r'^http://',tag['href']):
+                  tag.replace_with(tag.text)
+                  continue
+                rep = "["+tag.text+"]("+urlstart+tag['href'].replace(')','\)')+")"
+                discard = tag.replace_with(rep)
+            data = s.text                             #Post only first paragraph
+        except Exception as e:
+          #fail("TEXT PACKAGE FAIL: %s"%e)
+          if summary_call:
+            try:
+              term = url_string
+              tell_me_text = wikia.summary(sub_wikia, term,auto_suggest=False,redirect=True)
+              tell_me_link = wikia.page(term,auto_suggest=False).url
+              title = wikia.page(term,auto_suggest=False).title
+              if bool(re.search(title,tell_me_text)):
+                summary = re.sub(title,"[**"+title+"**]("+tell_me_link+")",tell_me_text)
+              else:
+                summary = "[**"+title+"**](" + tell_me_link + "): " + tell_me_text
+              #log("INTERPRETATION: %s"%filter(lambda x: x in string.printable, title))
+              if re.search(r'#',title):
+                summary = wikia.page(title.split('#')[0]).section(title.split('#')[1])
+                if summary == None or str(filter(lambda x: x in string.printable, summary)).strip() == "":
+                  page_url = wikia.page(title.split('#')[0]).url
+                  summary = "Sorry, I failed to fetch the section, but here's the link: "+page_url+"#"+title.split('#')[1]
+              if re.search(r'(',page_url):
+                page_url = process_brackets_links(page_url)
+              comment = "*Here you go:*\n\n---\n\n>\n"+summary+"\n\n---\n\n"
+              post_reply(comment,post)
+              continue
+            except Exception as e:
+              if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
+                deflist = ">Definitions for few of those terms:"
+                for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
+                  deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,auto_suggest=False,sentences=1)
+                  if idx > 3:
+                    break
+                #comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
+                summary = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
+                #log("ASKING FOR DISAMBIGUATION")
+              else:
+                #log("INTERPRETATION FAIL: %s"%term)
+                try:
+                  terms = "\""+term+"\""
+                  suggest = wikia.search(sub_wikia, terms,results=1)[0]
+                  trialsummary = wikia.summary(sub_wikia, suggest,auto_suggest=True)
+                  comment = "*Nearest match for* ***"+term.trim()+"*** *is* ***"+suggest+"*** :\n\n---\n\n>"+trialsummary+"\n\n---\n\n"
+                  #log("SUGGESTING %s"%suggest)
+                except:
+                  comment = "*Sorry, couldn't find a wikia article about that or maybe I couldn't process that due to Wikia server errors.*\n\n---\n\n"
+                  #log("COULD NOT SUGGEST FOR %s"%term)
+                post_reply(comment,post)
+                continue
+          continue
+        data = strip_wiki(data)
+        data = re.sub("Cite error: There are ref tags on this page, but the references will not show without a \{\{reflist\}\} template \(see the help page\)\.", '', data)
+        #truncateddata = truncate(data,1000)
+        if data.__len__() < 50:
+          #log("TOO SMALL INTRODUCTION PARAGRAPH")
+          continue
+        #success("TEXT PACKAGED")
+
+        ### Fetch page image from wikia
+        try:
+          ### Extract image url
+          try:
+            page_image = urllib.unquote(page_image.decode('utf-8','ignore'))
+          except:
+            raise Exception("no page image")
+          if page_image.endswith("ogg") or page_image == "":
+            raise Exception("no image")
+          url = (base_wikia_url+"api.php?action=query&titles=File:"+page_image+"&prop=imageinfo&iiprop=url|mediatype&iiurlwidth=640&format=xml")
+          socket.setdefaulttimeout(30)
+          wi_api_data = urllib2.urlopen(url).read()
+          wisoup = BeautifulSoup(wi_api_data)
+          image_url = wisoup.ii['thumburl']
+          image_source_url = wisoup.ii['descriptionurl']
+          image_source_url = re.sub(r'\)','\)',image_source_url)
+          image_source_url = re.sub(r'\(','\(',image_source_url)
+          global image_source_markdown
+          image_source_markdown = ("[^(i)]("+image_source_url+")")
+
+          ### Upload to imgur
+          uploaded_image = im.upload_image(url=image_url, title=page_image)
+
+          ### Extract caption from already fetched sectiondata
+          try:
+            caption_div = sectionnsoup.find("div", { "class" : "thumbcaption" })
+            if caption_div is None:
+              raise Exception("caption not packaged: no caption found in section 0")
+            if page_image not in str(caption_div.find("div", { "class" : "magnify" })):
+              raise Exception("caption not packaged: page image not in section 0")
+            discard = caption_div.find("div", { "class" : "magnify" }).extract()
+            caption = caption_div.text.strip()
+            caption = strip_wiki(caption)
+            caption = re.sub(r'\)','\)',caption)
+            caption = re.sub(r'\(','\(',caption)
+            caption = re.sub(r'\*','',caption)
+            caption = re.sub(r'\n',' ',caption)
+            if caption != "":
+              caption_markdown = (" - *"+caption+"*")
+              caption_div = None
+              #success("CAPTION PACKAGED")
+            else:
+              raise Exception("caption not packaged: no caption found in section 0")
+          except Exception as e:
+            if str(e) == "caption not packaged: page image has no caption":
+              pic_markdown = "Image"
+            elif str(e) == "caption not packaged: page image not in section 0":
+              pic_markdown = "Image from article"
+            caption_markdown = ""
+            #log(e)
+          image_markdown = ("====\n\n>[**"+pic_markdown+"**]("+uploaded_image.link.replace('http://','https://')+") "+image_source_markdown+caption_markdown)
+          #success("IMAGE PACKAGED VIA %s"%uploaded_image.link)
+        except Exception as e:
+          image_markdown = ""
+          #traceback.print_exc()
+          #log("IMAGE: %s"%str(e).strip().replace('\n',''))
+
+        ###Interesting articles
+        try:
+          intlist = wikia.search(sub_wikia, article_name_terminal,results=5)
+          if intlist.__len__() > 1:
+            if article_name_terminal in intlist:
+              intlist.remove(article_name_terminal)
+            interesting_list = ""
+            for topic in intlist:
+              try:
+                topicurl = wikia.page(topic,auto_suggest=False).url.replace('(','\(').replace(')','\)')
+              except:
+                continue
+              topic = topic.replace(' ',' ^').replace(' ^(',' ^\(')
+              interesting_list = interesting_list + " [^" + topic + "]" + "(" +topicurl.replace('http://','https://')+ ") ^|"
+            interesting_markdown = "^Interesting:"+interesting_list.strip('^|')
+            #success("%s INTERESTING ARTICLE LINKS PACKAGED"%intlist.__len__())
+          else:
+            raise Exception("no suggestions")
+        except Exception as e:
+          interesting_markdown = ""
+          #traceback.print_exc()
+          #log("INTERESTING ARTICLE LINKS NOT PACKAGED: %s"%str(e).strip().replace('\n',''))
+
+        ###NSFW tagging
+        #badwords = getnsfw(data)
+        badwords = None #mark all articles as sfw for now
+        if badwords:
+          badlist = ''
+          for word in badwords:
+            badlist = badlist + word + ',%20'
+          nsfwurl = "http://www.np.reddit.com/message/compose?to=%28This%20is%20a%20placeholder%29/r/autowikibot&subject="+str(len(badwords))+"%20NSFW%20words%20are%20present%20in%20this%20comment:&message="+badlist.strip(',%20')+"%0a%0aIf%20you%20think%20any%20of%20word/s%20above%20is%20SFW,%20forward%20this%20message%20to%20/r/autowikibot%20%28keep%20the%20subject%20unchanged%29%0a%0acontext:"+str(post.permalink)
+          nsfwtag = " [](#nsfw-start)**^NSFW** [^^(?)]("+nsfwurl+")[](#nsfw-end)"
+          #success("FOUND %s NSFW WORDS"%str(len(badwords)))
+        else:
+          nsfwtag = " [](#sfw)"
+
+        post_markdown = bit_comment_start+" [**"+article_name_terminal+"**](https://en.wikia.com/wiki/"+url_string_for_fetch.replace(')','\)')+"):"+nsfwtag+" \n\n---\n\n>"+data+"\n\n>"+image_markdown+"\n\n---\n\n"+interesting_markdown+"\n\n"
+        a = post_reply(post_markdown,post)
+        image_markdown = ""
+        if not a:
+          continue
+
   except KeyboardInterrupt:
     save_changing_variables('exit dump')
     warn("EXITING")
     break
-  except Exception as e: 
+  except Exception as e:
     traceback.print_exc()
     warn("GLOBAL: %s"%e)
     time.sleep(3)
     continue
-  
+
