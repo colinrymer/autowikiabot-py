@@ -1,17 +1,15 @@
-AutoWikibot
+AutoWikiabot
 ===========
 
-Reddit bot that replies to comments with excerpt from linked wikipedia article or section.
+A Reddit bot that replies to comments with an excerpt from a linked wikia article or section.
 
 Current instance:
-[In action](http://www.reddit.com/u/autowikibot) |
-[Subreddit](http://www.reddit.com/r/autowikibot/)
+[In action](http://www.reddit.com/u/autowikiabot) |
+[Subreddit](http://www.reddit.com/r/autowikiabot/)
 
 Features
 ========
 
-* Responds to comments like "wikibot, what is dancing?" and  "wikibot, tell me about enigma machine"
-* In-post summoning to keywords. e.g. I guess, OP should add some more ?- Liverwurst -? to the recipe
 * Suggest upto 4 related interesting articles
 * Deletes on parent commenter command
 * Deletes if comment score below threshold
@@ -25,7 +23,7 @@ Tested in Python 2.7.6
 * `pip install praw`
 * `pip install pyimgur`
 * `pip install beautifulsoup4`
-* `pip install wikipedia`
+* Install wikia from [my repository](https://github.com/Timidger/Wikia)
 
 
 Configuration
@@ -64,3 +62,4 @@ License
 =========
 
 This source code is available under a custom licence. See the accompanying file LICENCE.
+
