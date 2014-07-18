@@ -522,16 +522,11 @@ while True:
         if not url_string:
           continue
         article_name_terminal = None
-        fail("LINK: %s"%link)
         sub_wikia = find_sub_wikia(link)
-        fail("Sub_wikia: %s"%sub_wikia)
-
-        is_section = False
         # Screw it, I'm not digging through uncommented regexs
         url_string = url_string.replace("/", "")
-        fail("URL STRING: %s"%url_string)
         base_wikia_url = "https://" + sub_wikia + ".wikia.com/"
-        fail("base_wikia_url = %s"%base_wikia_url)
+        is_section = False
         ### check for subheading in url string, process if present
         if re.search(r"#",url_string) and not summary_call:
           pagenameraw = url_string.split('#')[0]
@@ -634,7 +629,6 @@ while True:
 
         ### fetch data from wikia
         url = (base_wikia_url+"api.php?action=parse&page="+url_string_for_fetch+"&format=xml&prop=text&section="+str(section)+"&redirects")
-        fail("URL!!! == %s"%url)
         try:
           socket.setdefaulttimeout(30)
           sectiondata = urllib2.urlopen(url).read()
