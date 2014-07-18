@@ -226,7 +226,7 @@ while True:
     log("EXITING")
     break
   except Exception as e:
-    #traceback.print_exc()
+    traceback.print_exc()
     fail(e)
     time.sleep(3)
     continue
