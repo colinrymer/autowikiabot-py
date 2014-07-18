@@ -11,7 +11,7 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
-r = praw.Reddit("autowikibot by /u/acini at /r/autowikibot")
+r = praw.Reddit("autowikiabot by /u/acini at /r/autowikiabot")
 excludekeyword = "leave me alone"
 includekeyword = "follow me again"
 global banned_users
@@ -37,7 +37,7 @@ while Trying:
 
 ### Load saved data
 try:
-  banned_users_page = r.get_wiki_page('autowikibot','userblacklist')
+  banned_users_page = r.get_wiki_page('autowikiabot','userblacklist')
   banned_users = banned_users_page.content_md.strip().split()
   deleted = 0
   success("DATA LOADED")
@@ -145,7 +145,7 @@ while True:
             for item in banned_users:
               c_banned_users = "    "+item+'\n'+c_banned_users
             editsummary = 'added '+str(msg.author.name)
-            r.edit_wiki_page('autowikibot','userblacklist',c_banned_users,editsummary)
+            r.edit_wiki_page('autowikiabot','userblacklist',c_banned_users,editsummary)
             time.sleep(1)
             msg.mark_as_read()
             #msg.reply("*Done! I won't reply to your comments now. Allow me 15 minutes to put this in effect.*\n\n*Have a nice day!*")
@@ -163,7 +163,7 @@ while True:
               for item in banned_users:
                 c_banned_users = "    "+item+'\n'+c_banned_users
               editsummary = 'removed '+str(msg.author.name)
-              r.edit_wiki_page('autowikibot','userblacklist',c_banned_users,editsummary)
+              r.edit_wiki_page('autowikiabot','userblacklist',c_banned_users,editsummary)
               #msg.reply("*OK! I removed you from the blacklist. I will resume replying to your comments now.*")
               success("UNBANNED /u/%s AT %s"%(msg.author.name,msg.id))
             else:
