@@ -197,7 +197,7 @@ while True:
         spaces = "   "
 
       total = total + 1
-      if c.score < 1 or '#placeholder-awb' in c.body.lower:
+      if c.score < 1 or '#placeholder-awb' in c.body.lower():
         c.delete()
         print "\033[1;41m%s%s\033[1;m"%(spaces,c.score),
         deleted = deleted + 1
