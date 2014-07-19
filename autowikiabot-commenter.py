@@ -259,19 +259,19 @@ def process_summary_call(post):
     log("EMPTY TERM")
     return(False,False)
   try:
-    title = wikia.page(link, term,auto_suggest=False).title
+    title = wikia.page(sub_wikia, term,).title
     if title.lower() == term:
       bit_comment_start = ""
     elif title.lower() != term:
       try:
-        discard = wikia.page(link, term,auto_suggest=False,redirect=False).title
+        discard = wikia.page(sub_wikia, term,redirect=False).title
       except Exception as e:
         if re.search('resulted in a redirect',str(e)):
           bit_comment_start = "*\"" + term.strip() + "\" redirects to* "
     else:
       bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
     if re.search(r'#',title):
-      url = wikia.page(link, title.split('#')[0],auto_suggest=False).url
+      url = wikia.page(sub_wikia, title.split('#')[0],).url
       sectionurl =  url + "#" + title.split('#')[1]
       comment = "*Nearest match for* ***" + term.strip() + "*** *is the section ["+title.split('#')[1]+"]("+sectionurl.replace(')','\)')+") in article ["+title.split('#')[0]+"]("+url+").*\n\n---\n\n"
       post_reply(comment,post)
@@ -284,7 +284,7 @@ def process_summary_call(post):
     if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
       deflist = ">Definitions for few of those terms:"
       for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-        deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,auto_suggest=False,sentences=1)
+        deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,sentences=1)
         if idx > 3:
           break
       summary = "*Oops,* ***"+term.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
@@ -303,7 +303,7 @@ def process_summary_call(post):
           suggesttitle = suggesttitle[0:--(suggesttitle.__len__()-1)]
         return (str(suggesttitle),bit_comment_start)
       except:
-        trialtitle = wikia.page(link, term,auto_suggest=True).title
+        trialtitle = wikia.page(sub_wikia, term,).title
         if trialtitle.lower() == term:
           bit_comment_start = ""
         else:
@@ -512,7 +512,7 @@ while True:
             if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
               deflist = ">Definitions for few of those terms:"
               for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-                deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,auto_suggest=False,sentences=1)
+                deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,sentences=1)
                 if idx > 3:
                   break
               summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
@@ -657,8 +657,8 @@ while True:
                   if re.search('#cite',tag['href']):
                     tag.replace_with('')
                     continue
-                  elif re.search('/wiki/',tag['href']):
-                    urlstart = "https://en.wikia.com"
+                  elif re.search('/wikia/',tag['href']):
+                    urlstart = "https://"+sub_wikia+".wikia.com"
                   elif re.search('#',tag['href']):
                     tag.unwrap()
                     continue
@@ -684,7 +684,7 @@ while True:
                   tag.replace_with('')
                   continue
                 elif re.search('/wiki/',tag['href']):
-                  urlstart = "https://en.wikia.com"
+                  urlstart = "https://"+sub_wikia+".wikia.com"
                 elif re.search('#',tag['href']):
                   tag.unwrap()
                   continue
@@ -699,18 +699,18 @@ while True:
           if summary_call:
             try:
               term = url_string
-              tell_me_text = wikia.summary(sub_wikia, term,auto_suggest=False,redirect=True)
-              tell_me_link = wikia.page(link, term,auto_suggest=False).url
-              title = wikia.page(link, term,auto_suggest=False).title
+              tell_me_text = wikia.summary(sub_wikia, term,redirect=True)
+              tell_me_link = wikia.page(sub_wikia, term,).url
+              title = wikia.page(sub_wikia, term,).title
               if bool(re.search(title,tell_me_text)):
                 summary = re.sub(title,"[**"+title+"**]("+tell_me_link+")",tell_me_text)
               else:
                 summary = "[**"+title+"**](" + tell_me_link + "): " + tell_me_text
               log("INTERPRETATION: %s"%filter(lambda x: x in string.printable, title))
               if re.search(r'#',title):
-                summary = wikia.page(link, title.split('#')[0]).section(title.split('#')[1])
+                summary = wikia.page(sub_wikia, title.split('#')[0]).section(title.split('#')[1])
                 if summary == None or str(filter(lambda x: x in string.printable, summary)).strip() == "":
-                  page_url = wikia.page(link, title.split('#')[0]).url
+                  page_url = wikia.page(sub_wikia, title.split('#')[0]).url
                   summary = "Sorry, I failed to fetch the section, but here's the link: "+page_url+"#"+title.split('#')[1]
               if re.search(r'(',page_url):
                 page_url = process_brackets_links(page_url)
@@ -721,7 +721,7 @@ while True:
               if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
                 deflist = ">Definitions for few of those terms:"
                 for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-                  deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,auto_suggest=False,sentences=1)
+                  deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikia.summary(sub_wikia, val,sentences=1)
                   if idx > 3:
                     break
                 #comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
@@ -732,7 +732,7 @@ while True:
                 try:
                   terms = "\""+term+"\""
                   suggest = wikia.search(sub_wikia, terms,results=1)[0]
-                  trialsummary = wikia.summary(sub_wikia, suggest,auto_suggest=True)
+                  trialsummary = wikia.summary(sub_wikia, suggest,)
                   comment = "*Nearest match for* ***"+term.trim()+"*** *is* ***"+suggest+"*** :\n\n---\n\n>"+trialsummary+"\n\n---\n\n"
                   log("SUGGESTING %s"%suggest)
                 except:
@@ -815,7 +815,7 @@ while True:
             interesting_list = ""
             for topic in intlist:
               try:
-                topicurl = wikia.page(link, topic,auto_suggest=False).url.replace('(','\(').replace(')','\)')
+                topicurl = wikia.page(sub_wikia, topic,).url.replace('(','\(').replace(')','\)')
               except:
                 continue
               topic = topic.replace(' ',' ^').replace(' ^(',' ^\(')
@@ -842,7 +842,7 @@ while True:
         else:
           nsfwtag = " [](#sfw)"
 
-        post_markdown = bit_comment_start+" [**"+article_name_terminal+"**](https://en.wikia.com/wiki/"+url_string_for_fetch.replace(')','\)')+"):"+nsfwtag+" \n\n---\n\n>"+data+"\n\n>"+image_markdown+"\n\n---\n\n"+interesting_markdown+"\n\n"
+        post_markdown = bit_comment_start+" [**"+article_name_terminal+"**](https://"+sub_wikia+".wikia.com/wiki/"+url_string_for_fetch.replace(')','\)')+"):"+nsfwtag+" \n\n---\n\n>"+data+"\n\n>"+image_markdown+"\n\n---\n\n"+interesting_markdown+"\n\n"
         a = post_reply(post_markdown,post)
         image_markdown = ""
         if not a:
