@@ -211,7 +211,7 @@ def filterpass(post):
       try:
         title = "COMMENT LIMIT " + "/r/"+str(post.subreddit)
         suburl = str(post.submission.short_link)
-        r.submit('acini',title,url=suburl)
+        r.submit('acini',title,url=suburl, raise_captcha_exception=True)
       except:
         pass
       return False
@@ -478,14 +478,14 @@ while True:
                 a = post_reply(comment,post)
                 title = "MODSWITCH: %s"%str(post.subreddit)
                 subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
-                r.submit('acini',title,text=subtext)
+                r.submit('acini',title,text=subtext, raise_captcha_exception=True)
               if a:
                 special("MODSWITCH: %s @ %s"%(comment.replace('*',''),post.id))
               else:
                 fail("MODSWITCH REPLY FAILED: %s @ %s"%(comment,post.id))
                 title = "MODSWITCH REPLY FAILED: %s"%str(post.subreddit)
                 subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
-                r.submit('acini',title,text=subtext)
+                r.submit('acini',title,text=subtext, raise_captcha_exception=True)
             else:
               if post.subreddit not in badsubs:
                 comment = "*Moderator switches can only be switched ON and OFF by moderators of this subreddit.*\n\n*If you want specific feature turned ON or OFF, [ask the moderators](http://www.np.reddit.com/message/compose?to=%2Fr%2F"+str(post.subreddit)+") and provide them with [this link](http://www.np.reddit.com/r/autowikiabot/wiki/modfaqs).*\n\n---\n\n"
@@ -494,7 +494,7 @@ while True:
             title = "MODSWITCH FAILURE !!: %s"%str(post.subreddit)
             traceback.print_exc()
             subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+str(e)
-            r.submit('acini',title,text=subtext)
+            r.submit('acini',title,text=subtext, raise_captcha_exception=True)
           continue
         elif has_link:
           url_string = get_url_string(post)
