@@ -17,7 +17,7 @@ dname = os.path.dirname(abspath)
 os.chdir(dname)
 
 def find_link(body):
-    begin_index = body.find("http://") 
+    begin_index = body.find(re.findall("https?://", body)[0])
     for index, char in enumerate(body[begin_index:]):
         if char in (" ", ")"):
             end_index = index + begin_index
