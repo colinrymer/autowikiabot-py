@@ -629,7 +629,7 @@ while True:
         ### Try to find a background/description section
         # Only if the poster did not specify a specific section
         if not section:
-          url = (base_wikia_url+"api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
+          url = (base_wikia_url+"api.php?action=parse&page="+url_string_for_fetch+"&format=xml&prop=sections")
           socket.setdefaulttimeout(30)
           slsoup = BeautifulSoup(urllib2.urlopen(url).read())
           for s in slsoup.find_all('s'):
