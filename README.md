@@ -10,7 +10,6 @@ Current instance:
 Features
 ========
 
-* Suggest upto 4 related interesting articles
 * Deletes on parent commenter command
 * Deletes if comment score below threshold
 * User blacklist
