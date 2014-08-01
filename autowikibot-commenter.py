@@ -31,16 +31,11 @@ def load_data():
   badsubs_page = r.get_wiki_page('autowikibot','excludedsubs')
   root_only_subs_page = r.get_wiki_page('autowikibot','rootonlysubs')
   summon_only_subs_page = r.get_wiki_page('autowikibot','summononlysubs')
-  try:
-    banned_users = banned_users_page.content_md.strip().split()
-    badsubs = badsubs_page.content_md.strip().split()
-    root_only_subs = root_only_subs_page.content_md.strip().split()
-    summon_only_subs = summon_only_subs_page.content_md.strip().split()
-    success("DATA LOADED")
-  except Exception as e:
-    #traceback.print_exc()
-    fail("DATA LOAD FAILED: %s"%e)
-    exit()
+  banned_users = banned_users_page.content_md.strip().split()
+  badsubs = badsubs_page.content_md.strip().split()
+  root_only_subs = root_only_subs_page.content_md.strip().split()
+  summon_only_subs = summon_only_subs_page.content_md.strip().split()
+  success("DATA LOADED")
 
 def save_changing_variables(editsummary):
   ##Save badsubs
