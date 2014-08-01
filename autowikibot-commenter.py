@@ -55,11 +55,18 @@ def load_data():
   badsubs_page = r.get_wiki_page(BOT_NAME,'excludedsubs')
   root_only_subs_page = r.get_wiki_page(BOT_NAME,'rootonlysubs')
   summon_only_subs_page = r.get_wiki_page(BOT_NAME,'summononlysubs')
-  banned_users = banned_users_page.content_md.strip().split()
-  badsubs = badsubs_page.content_md.strip().split()
-  root_only_subs = root_only_subs_page.content_md.strip().split()
-  summon_only_subs = summon_only_subs_page.content_md.strip().split()
+  load_changing_variables()
   success("DATA LOADED")
+
+def load_changing_variables():
+  global banned_users
+  global badsubs
+  global root_only_subs
+  global summon_only_subs
+  banned_users = banned_users_page.content_md.split()
+  badsubs = badsubs_page.content_md.split()
+  root_only_subs = root_only_subs_page.content_md.split()
+  summon_only_subs = summon_only_subs_page.content_md.split()
 
 def save_changing_variables(editsummary):
   global badsubs
@@ -142,7 +149,7 @@ def post_reply(reply, post):
     if str(e) == '(TOO_LONG) `this is too long (max: 15000.0)` on field `text`':
       comment.delete()
     elif str(e) == '403 Client Error: Forbidden' and str(post.subreddit) not in badsubs:
-      badsubs = badsubs_page.content_md.strip().split()
+      load_changing_variables()
       badsubs.append(str(post.subreddit))
       editsummary = 'added '+str(post.subreddit)
       save_changing_variables(editsummary)
@@ -381,7 +388,7 @@ while True:
       now = int(float(time.strftime("%s")))
       diff = now - lastload
       if diff > 899:
-	banned_users = banned_users_page.content_md.strip().split()
+        load_changing_variables()
 	bluelog("BANNED USER LIST RENEWED")
 	save_changing_variables('scheduled dump')
 	lastload = now
@@ -415,7 +422,7 @@ while True:
 		if str(post.subreddit) not in summon_only_subs:
 		  comment = "*Summon only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
 		else:
-		  badsubs = badsubs_page.content_md.strip().split()
+                  load_changing_variables()
 		  summon_only_subs.remove(str(post.subreddit))
 		  if str(post.subreddit) in badsubs:
 		    badsubs.remove(str(post.subreddit))
@@ -436,7 +443,7 @@ while True:
 		if str(post.subreddit) not in root_only_subs:
 		  comment = "*Root only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
 		else:
-		  badsubs = badsubs_page.content_md.strip().split()
+                  load_changing_variables()
 		  root_only_subs.remove(str(post.subreddit))
 		  if str(post.subreddit) in badsubs:
 		    badsubs.remove(str(post.subreddit))
