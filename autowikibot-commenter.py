@@ -97,23 +97,14 @@ def comment_limit_reached(post):
   return False
   
 def is_already_done(post):
-  done = False
-  numofr = 0
-  try:
-    repliesarray = post.replies
-    numofr = len(list(repliesarray))
-  except:
-    pass
-  if numofr != 0:
-    for repl in post.replies:
-      if repl.author != None and (repl.author.name == BOT_NAME or repl.author.name == 'Text_Reader_Bot'):
-	warn("%s IS ALREADY DONE"%post.id)
-	done = True
-	continue
-  if done:
-    return True
+  for reply in post.replyies:
+    if reply.author is not None and reply.author.name in (BOT_NAME, 'Text_Reader_Bot'):
+      warn("%s IS ALREADY DONE"%post.id)
+      break
+  # Only is executed if the loop doesn't break prematurely
   else:
     return False
+  return True
 
 def post_reply(reply,post):
   global badsubs
