@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import praw, time, datetime, re, urllib, urllib2, pickle, pyimgur, os, traceback, wikipedia, string, socket, sys, collections
-from nsfw import getnsfw
+#from nsfw import getnsfw
 from util import success, warn, log, fail, special, bluelog
 from bs4 import BeautifulSoup
 from HTMLParser import HTMLParser
 
 ### Uncomment to debug
 #import logging
-#logging.basicConfig(level=logging.DEBOT_WIKI_NAMEUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 ### Set root directory to script directory
 
@@ -17,6 +17,27 @@ BOT_NAME = "autowikibot"
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
+
+# Get the configuration options
+with open ('datafile.inf', 'r') as myfile:
+  datafile_lines=myfile.readlines()
+
+### Login
+r = praw.Reddit("autowikibot by /u/acini at /r/autowikibot")
+USERNAME = datafile_lines[0].strip()
+PASSWORD = datafile_lines[1].strip()
+Trying = True
+while Trying:
+	try:
+		r.login(USERNAME, PASSWORD)
+		success("LOGGED IN")
+		Trying = False
+	except praw.errors.InvalidUserPass:
+		fail("WRONG USERNAME OR PASSWORD")
+		exit()
+	except Exception as e:
+	  fail("%s"%e)
+	  time.sleep(5)
 
 ###Load data
 def load_data():
@@ -47,7 +68,7 @@ def save_changing_variables(editsummary):
   # A wiki page and it's corresponding list of subreddits
   wiki_pages_and_subreddit_lists = {"excludedsubs": badsubs,
                                     "rootonlysubs": root_only_subs,
-                                    "summononlysubs": summononlysubs
+                                    "summononlysubs": summon_only_subs
                                    }
   # Format the bad subreddits for the wiki page
   for wiki_page, subreddit_list in wiki_pages_and_subreddit_lists.iteritems():
@@ -60,26 +81,6 @@ def save_changing_variables(editsummary):
   
   success("DATA SAVED")
 
-with open ('datafile.inf', 'r') as myfile:
-  datafile_lines=myfile.readlines()
-
-### Login
-r = praw.Reddit("autowikibot by /u/acini at /r/autowikibot")
-USERNAME = datafile_lines[0].strip()
-PASSWORD = datafile_lines[1].strip()
-Trying = True
-while Trying:
-	try:
-		r.login(USERNAME, PASSWORD)
-		success("LOGGED IN")
-		Trying = False
-	except praw.errors.InvalidUserPass:
-		fail("WRONG USERNAME OR PASSWORD")
-		exit()
-	except Exception as e:
-	  fail("%s"%e)
-	  time.sleep(5)
-    
 def is_summon_chain(post):
   if not post.is_root:
     parent_comment_id = post.parent_id
@@ -109,7 +110,7 @@ def is_already_done(post):
     pass
   if numofr != 0:
     for repl in post.replies:
-      if repl.author != None and (repl.author.name == BOT_NAME or repl.author.name == 'Text_Reader_BOT_WIKI_NAMEot'):
+      if repl.author != None and (repl.author.name == BOT_NAME or repl.author.name == 'Text_Reader_Bot'):
 	warn("%s IS ALREADY DONE"%post.id)
 	done = True
 	continue
@@ -123,7 +124,7 @@ def post_reply(reply,post):
   global submissioncount
   global totalposted
   try:
-    reply = "#####&#009;\n\n######&#009;\n\n####&#009;\n"+reply+"^Parent ^commenter ^can [^toggle ^NSFW](http://www.np.reddit.com/message/compose?to=autowikibot&subject=AutoWikibot NSFW toggle&message=%2BOT_WIKI_NAMEtoggle-nsfw+____id____) ^or[](#or) [^delete](http://www.np.reddit.com/message/compose?to=autowikibot&subject=AutoWikibot Deletion&message=%2BOT_WIKI_NAMEdelete+____id____)^. ^Will ^also ^delete ^on ^comment ^score ^of ^-1 ^or ^less. ^| [^(FAQs)](http://www.np.reddit.com/r/autowikibot/wiki/index) ^| [^Mods](http://www.np.reddit.com/r/autowikibot/comments/1x013o/for_moderators_switches_commands_and_css/) ^| [^Magic ^Words](http://www.np.reddit.com/r/autowikibot/comments/1ux484/ask_wikibot/)"
+    reply = "#####&#009;\n\n######&#009;\n\n####&#009;\n"+reply+"^Parent ^commenter ^can [^toggle ^NSFW](http://www.np.reddit.com/message/compose?to=autowikibot&subject=AutoWikibot NSFW toggle&message=%2Btoggle-nsfw+____id____) ^or[](#or) [^delete](http://www.np.reddit.com/message/compose?to=autowikibot&subject=AutoWikibot Deletion&message=%2Bdelete+____id____)^. ^Will ^also ^delete ^on ^comment ^score ^of ^-1 ^or ^less. ^| [^(FAQs)](http://www.np.reddit.com/r/autowikibot/wiki/index) ^| [^Mods](http://www.np.reddit.com/r/autowikibot/comments/1x013o/for_moderators_switches_commands_and_css/) ^| [^Magic ^Words](http://www.np.reddit.com/r/autowikibot/comments/1ux484/ask_wikibot/)"
     a = post.reply('[#placeholder-awb]Comment is being processed... It will be automatically replaced by new text within a minute or will be deleted if that fails.')
     postsuccess = r.get_info(thing_id='t1_'+str(a.id)).edit(reply.replace('____id____',str(a.id)))
     if not postsuccess:
@@ -214,7 +215,7 @@ def process_summary_call(post):
     
   special("SUMMARY CALL: %s @ %s"%(filter(lambda x: x in string.printable, term),post.id))
   if term.lower().strip() == 'love':
-    #post_reply('*BOT_WIKI_NAMEaby don\'t hurt me! Now seriously, stop asking me about love so many times! O.o What were we discussing about in this thread again?*',post)
+    #post_reply('*Baby don\'t hurt me! Now seriously, stop asking me about love so many times! O.o What were we discussing about in this thread again?*',post)
     return(False,False)
   #if term.lower().strip() == 'wikibot':
     #post_reply('*Me! I know me.*',post)
@@ -255,7 +256,7 @@ def process_summary_call(post):
 	if idx > 3:
 	  break
       summary = "*Oops,* ***"+term.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-      #log("ASKING FOR DISAMBOT_WIKI_NAMEIGUATION")
+      #log("ASKING FOR DISAMBIGUATION")
     else:
       #log("INTERPRETATION FAIL: %s"%filter(lambda x: x in string.printable, term))
       try:
@@ -377,7 +378,7 @@ while True:
       diff = now - lastload
       if diff > 899:
 	banned_users = banned_users_page.content_md.strip().split()
-	bluelog("BOT_WIKI_NAMEANNED USER LIST RENEWED")
+	bluelog("BANNED USER LIST RENEWED")
 	save_changing_variables('scheduled dump')
 	lastload = now
       
@@ -483,7 +484,7 @@ while True:
 		if idx > 3:
 		  break
 	      summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-	      #log("ASKING FOR DISAMBOT_WIKI_NAMEIGUATION")
+	      #log("ASKING FOR DISAMBIGUATION")
 	      post_reply(summary,post)
 	      continue
 	if not url_string:
@@ -507,7 +508,7 @@ while True:
 	  try:
 	    url = ("https://en.wikipedia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
 	    socket.setdefaulttimeout(30)
-	    slsoup = BOT_WIKI_NAMEeautifulSoup(urllib2.urlopen(url).read())
+	    slsoup = BeautifulSoup(urllib2.urlopen(url).read())
 	    if slsoup.find_all('s').__len__() == 0:
 	      raise Exception("no sections found")
 	    for s in slsoup.find_all('s'):
@@ -516,7 +517,7 @@ while True:
 		bit_comment_start = "Section "+section+". [**"+sectionname.decode('utf-8','ignore').replace('_',' ')+"**](https://en.wikipedia.org/wiki/"+url_string+") of article "
 		url_string = pagenameraw
 		url = ("https://en.wikipedia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=images&section="+section)
-		sisoup = BOT_WIKI_NAMEeautifulSoup(urllib2.urlopen(url).read())
+		sisoup = BeautifulSoup(urllib2.urlopen(url).read())
 		try:
 		  page_image = sisoup.img.text
 		except:
@@ -567,7 +568,7 @@ while True:
 	    socket.setdefaulttimeout(30)
 	    pagepropsdata = urllib2.urlopen(url).read()
 	    pagepropsdata = pagepropsdata.decode('utf-8','ignore')
-	    ppsoup = BOT_WIKI_NAMEeautifulSoup(pagepropsdata)
+	    ppsoup = BeautifulSoup(pagepropsdata)
 	    article_name_terminal = ppsoup.page['title']
 	  except:
 	    try:
@@ -599,8 +600,8 @@ while True:
 	  sectiondata = urllib2.urlopen(url).read()
 	  sectiondata = sectiondata.decode('utf-8','ignore')
 	  sectiondata = reddify(sectiondata)
-	  soup = BOT_WIKI_NAMEeautifulSoup(sectiondata)
-	  soup = BOT_WIKI_NAMEeautifulSoup(soup.text)
+	  soup = BeautifulSoup(sectiondata)
+	  soup = BeautifulSoup(soup.text)
 	  sectionnsoup = soup
 	except Exception as e:
 	  #fail("FETCH: %s"%e)
@@ -690,7 +691,7 @@ while True:
 		    break
 		#comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
 		summary = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-		#log("ASKING FOR DISAMBOT_WIKI_NAMEIGUATION")
+		#log("ASKING FOR DISAMBIGUATION")
 	      else:
 		#log("INTERPRETATION FAIL: %s"%term)
 		try:
@@ -725,7 +726,7 @@ while True:
 	  url = ("https://en.wikipedia.org/w/api.php?action=query&titles=File:"+page_image+"&prop=imageinfo&iiprop=url|mediatype&iiurlwidth=640&format=xml")
 	  socket.setdefaulttimeout(30)
 	  wi_api_data = urllib2.urlopen(url).read()
-	  wisoup = BOT_WIKI_NAMEeautifulSoup(wi_api_data)
+	  wisoup = BeautifulSoup(wi_api_data)
 	  image_url = wisoup.ii['thumburl']
 	  image_source_url = wisoup.ii['descriptionurl']
 	  image_source_url = re.sub(r'\)','\)',image_source_url)
@@ -818,7 +819,7 @@ while True:
     break
   except Exception as e: 
     traceback.print_exc()
-    warn("GLOBOT_WIKI_NAMEAL: %s"%e)
+    warn("GLOBAL: %s"%e)
     time.sleep(3)
     continue
   
