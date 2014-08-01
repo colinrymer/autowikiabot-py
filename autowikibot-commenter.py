@@ -106,24 +106,41 @@ def is_already_done(post):
     return False
   return True
 
-def post_reply(reply,post):
+def post_reply(reply, post):
   global badsubs
   global submissioncount
   global totalposted
   try:
-    reply = "#####&#009;\n\n######&#009;\n\n####&#009;\n"+reply+"^Parent ^commenter ^can [^toggle ^NSFW](http://www.np.reddit.com/message/compose?to=autowikibot&subject=AutoWikibot NSFW toggle&message=%2Btoggle-nsfw+____id____) ^or[](#or) [^delete](http://www.np.reddit.com/message/compose?to=autowikibot&subject=AutoWikibot Deletion&message=%2Bdelete+____id____)^. ^Will ^also ^delete ^on ^comment ^score ^of ^-1 ^or ^less. ^| [^(FAQs)](http://www.np.reddit.com/r/autowikibot/wiki/index) ^| [^Mods](http://www.np.reddit.com/r/autowikibot/comments/1x013o/for_moderators_switches_commands_and_css/) ^| [^Magic ^Words](http://www.np.reddit.com/r/autowikibot/comments/1ux484/ask_wikibot/)"
-    a = post.reply('[#placeholder-awb]Comment is being processed... It will be automatically replaced by new text within a minute or will be deleted if that fails.')
-    postsuccess = r.get_info(thing_id='t1_'+str(a.id)).edit(reply.replace('____id____',str(a.id)))
+    comment = post.reply(("[#placeholder-awb]Comment is being processed... "
+                    "It will be automatically replaced by new text within "
+                    "a minute or will be deleted if that fails."))
+    # Add the header + the actual message
+    reply = "#####&#009;\n\n######&#009;\n\n####&#009;\n" + reply
+    # Add the disclaimer/information footer
+    reply += ("^Parent ^commenter ^can [^toggle ^NSFW]"
+              "(http://www.np.reddit.com/message/compose?"
+              "to=autowikibot&subject=AutoWikibot "
+              "NSFW toggle&message=%2Btoggle-nsfw+{id}) ^or[](#or) "
+              "[^delete](http://www.np.reddit.com/message/compose?"
+              "to=autowikibot&subject=AutoWikibot Deletion&message=%2Bdelete+"
+              "{id})^. ^Will ^also ^delete ^on ^comment ^score ^of ^-1 "
+              "^or ^less. ^| [^(FAQs)](http://www.np.reddit.com/r/autowikibot"
+              "/wiki/index) ^| [^Mods](http://www.np.reddit.com/r/autowikibot"
+              "/comments/1x013o/for_moderators_switches_commands_and_css/) ^|"
+              " [^Magic ^Words](http://www.np.reddit.com/r/autowikibot/"
+              "comments/1ux484/ask_wikibot/)".format(id=comment.id))
+    # Edit the placeholder post
+    postsuccess = comment.edit(reply)
     if not postsuccess:
       raise Exception ('reply unsuccessful')
-    totalposted = totalposted + 1
-    submissioncount[str(post.submission.id)]+=1
+    totalposted += 1
+    submissioncount[str(post.submission.id)] += 1
     success("[OK] #%s "%totalposted)
     return True
   except Exception as e:
     warn("REPLY FAILED: %s @ %s"%(e,post.subreddit))
     if str(e) == '(TOO_LONG) `this is too long (max: 15000.0)` on field `text`':
-      a.delete()
+      comment.delete()
     elif str(e) == '403 Client Error: Forbidden' and str(post.subreddit) not in badsubs:
       badsubs = badsubs_page.content_md.strip().split()
       badsubs.append(str(post.subreddit))
@@ -131,7 +148,7 @@ def post_reply(reply,post):
       save_changing_variables(editsummary)
     else:
       fail(e)
-      a.delete()
+      comment.delete()
     return False
 	    
 def filterpass(post):
