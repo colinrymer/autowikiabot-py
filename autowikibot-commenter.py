@@ -3,7 +3,7 @@
 import praw, time, datetime, re, urllib, urllib2, pickle, pyimgur, os, traceback, wikipedia, string, socket, sys, collections
 from nsfw import getnsfw
 from util import success, warn, log, fail, special, bluelog
-from bs4 import BOT_WIKI_NAMEeautifulSoup
+from bs4 import BeautifulSoup
 from HTMLParser import HTMLParser
 
 ### Uncomment to debug
@@ -12,7 +12,7 @@ from HTMLParser import HTMLParser
 
 ### Set root directory to script directory
 
-BOT_WIKI_NAMEOT_NAME = "autowikibot"
+BOT_NAME = "autowikibot"
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -41,34 +41,22 @@ def load_data():
   success("DATA LOADED")
 
 def save_changing_variables(editsummary):
-  ##Save badsubs
   global badsubs
-  # Remove rendundant entries
-  badsubs = list(set(badsubs))
-  badsubs.sort(reverse=True)
-  c_badsubs = ""
-  # Format the bad subreddits for the wiki page
-  for wiki_page, sub_list in zip(("excludedsubs", "rootonlysubs"
-  for item in badsubs:
-    c_badsubs = "    "+item+'\n'+c_badsubs
-  r.edit_wiki_page(BOT_NAME,'excludedsubs',c_badsubs,editsummary)
-  ##Save root_only_subs
   global root_only_subs
-  root_only_subs = list(set(root_only_subs))
-  root_only_subs.sort(reverse=True)
-  c_root_only_subs = ""
-  for item in root_only_subs:
-    c_root_only_subs = "    "+item+'\n'+c_root_only_subs
-  r.edit_wiki_page(BOT_NAME,'rootonlysubs',c_root_only_subs,editsummary)
-  ##Save summon_only_subs
   global summon_only_subs
-  summon_only_subs = list(set(summon_only_subs))
-  summon_only_subs.sort(reverse=True)
-  c_summon_only_subs = ""
-  for item in summon_only_subs:
-    c_summon_only_subs = "    "+item+'\n'+c_summon_only_subs
-  r.edit_wiki_page(BOT_NAME,'summononlysubs',c_summon_only_subs,editsummary)
-  
+  # A wiki page and it's corresponding list of subreddits
+  wiki_pages_and_subreddit_lists = {"excludedsubs": badsubs,
+                                    "rootonlysubs": root_only_subs,
+                                    "summononlysubs": summononlysubs
+                                   }
+  # Format the bad subreddits for the wiki page
+  for wiki_page, subreddit_list in wiki_pages_and_subreddit_lists.iteritems():
+    # This line updates the global list to have no redundant entries
+    subreddit_list[:] = list(set(summon_only_subs))
+    formatted_sub_list = ""
+    for item in subreddit_list:
+      formatted_sub_list = "    " + item + "\n" + formatted_sub_list
+    r.edit_wiki_page(BOT_NAME, wiki_page, formatted_sub_list, editsummary)
   
   success("DATA SAVED")
 
