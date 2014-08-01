@@ -85,20 +85,16 @@ def is_summon_chain(post):
   if not post.is_root:
     parent_comment_id = post.parent_id
     parent_comment = r.get_info(thing_id=parent_comment_id)
-    if parent_comment.author != None and str(parent_comment.author.name) == BOT_NAME:
+    if parent_comment.author is not None and parent_comment.author.name == BOT_NAME:
       return True
-    else:
-      return False
-  else:
-    return False
+  return False
   
 def comment_limit_reached(post):
   global submissioncount
-  count_of_this = int(float(submissioncount[str(post.submission.id)]))
-  if count_of_this > 4 and not (str(post.subreddit) == 'autowikibotdelreq' or str(post.subreddit) == BOT_NAME or str(post.subreddit) == 'todayilearned'):
+  count_of_this = submissioncount[str(post.submission.id)]
+  if count_of_this > 4 and str(post.subreddit) not in ('autowikibotdelreq', 'todayilearned', BOT_NAME):
     return True
-  else:
-    return False
+  return False
   
 def is_already_done(post):
   done = False
