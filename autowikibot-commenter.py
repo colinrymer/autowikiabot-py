@@ -144,18 +144,22 @@ def post_reply(reply, post):
     submissioncount[str(post.submission.id)] += 1
     success("[OK] #%s "%totalposted)
     return True
-  except Exception as e:
-    warn("REPLY FAILED: %s @ %s"%(e,post.subreddit))
-    if str(e) == '(TOO_LONG) `this is too long (max: 15000.0)` on field `text`':
+  except urllib2.HTTPError as e:
+    warn("REPLY FAILED: %s @ %s"%(e, post.subreddit))
+    if e.code == 414:
       comment.delete()
-    elif str(e) == '403 Client Error: Forbidden' and str(post.subreddit) not in badsubs:
+    elif e.code == 403:
       load_changing_variables()
       badsubs.append(str(post.subreddit))
-      editsummary = 'added '+str(post.subreddit)
+      editsummary = 'added '+ str(post.subreddit)
       save_changing_variables(editsummary)
     else:
-      fail(e)
-      comment.delete()
+      fail("Uncaught HTTP error:%s" %e)
+    return False
+  except Exception as e:
+    warn("REPLY FAILED: %s @ %s"%(e, post.subreddit))
+    fail(e)
+    comment.delete()
     return False
 	    
 def filterpass(post):
