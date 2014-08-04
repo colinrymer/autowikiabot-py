@@ -378,7 +378,7 @@ load_data()
 im = pyimgur.Imgur(imgur_client_id)
 global pagepropsdata
 submissioncount = collections.Counter()
-lastload = int(float(time.strftime("%s")))
+lastload = int(time.strftime("%s"))
 has_list = False
 totalposted = 0
 
@@ -389,7 +389,7 @@ while True:
     for post in praw.helpers.comment_stream(r,str(sys.argv[1]), limit = None, verbosity=0):
       
       ### Dirty timer hack
-      now = int(float(time.strftime("%s")))
+      now = int(time.strftime("%s"))
       diff = now - lastload
       if diff > 899:
         load_changing_variables()
