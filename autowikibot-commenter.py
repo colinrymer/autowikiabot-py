@@ -214,7 +214,7 @@ def get_url_string(post):
       after_split = after_split.split(')')[0]
     return after_split
   except:
-    pass
+    return None
    
 def process_summary_call(post):
   #special("__________________________________________________")
