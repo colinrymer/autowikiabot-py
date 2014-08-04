@@ -14,31 +14,6 @@ from HTMLParser import HTMLParser
 
 BOT_NAME = "autowikibot"
 
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-os.chdir(dname)
-
-# Get the configuration options
-with open ('datafile.inf', 'r') as myfile:
-  datafile_lines=myfile.readlines()
-
-### Login
-r = praw.Reddit("autowikibot by /u/acini at /r/autowikibot")
-USERNAME = datafile_lines[0].strip()
-PASSWORD = datafile_lines[1].strip()
-Trying = True
-while Trying:
-	try:
-		r.login(USERNAME, PASSWORD)
-		success("LOGGED IN")
-		Trying = False
-	except praw.errors.InvalidUserPass:
-		fail("WRONG USERNAME OR PASSWORD")
-		exit()
-	except Exception as e:
-	  fail("%s"%e)
-	  time.sleep(5)
-
 ###Load data
 def load_data():
   global banned_users
@@ -374,6 +349,30 @@ def process_brackets_syntax(string):
   string = ("%s\)"%string)
   return string
   
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+os.chdir(dname)
+
+# Get the configuration options
+with open ('datafile.inf', 'r') as myfile:
+  datafile_lines=myfile.readlines()
+
+### Login
+r = praw.Reddit("autowikibot by /u/acini at /r/autowikibot")
+USERNAME = datafile_lines[0].strip()
+PASSWORD = datafile_lines[1].strip()
+Trying = True
+while Trying:
+	try:
+		r.login(USERNAME, PASSWORD)
+		success("LOGGED IN")
+		Trying = False
+	except praw.errors.InvalidUserPass:
+		fail("WRONG USERNAME OR PASSWORD")
+		exit()
+	except Exception as e:
+	  fail("%s"%e)
+	  time.sleep(5)
 ### declare variables
 load_data()
 im = pyimgur.Imgur(imgur_client_id)
