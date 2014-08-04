@@ -168,13 +168,14 @@ def filterpass(post):
   global mod_switch
   global badsubs
   global r
+  lowered_body = post.body.lower()
   if (post.author.name == USERNAME) or post.author.name in banned_users:
     return False
-  summary_call = re.search(r'wikibot.\s*wh.{1,3}(\'s|\s+is|\s+are|\s+was)\s+(an\s+|a\s+|the\s+|)(.*?)$',post.body.lower()) or re.search(r'wikibot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',post.body.lower()) or re.search("\?\-.*\-\?",post.body.lower())
+  summary_call = re.search(r'wikibot.\s*wh.{1,3}(\'s|\s+is|\s+are|\s+was)\s+(an\s+|a\s+|the\s+|)(.*?)$',lowered_body) or re.search(r'wikibot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',lowered_body) or re.search("\?\-.*\-\?",lowered_body)
   has_link = any(string in post.body for string in ['en.wikipedia.org/wiki/', 'en.m.wikipedia.org/wiki/'])
-  mod_switch = re.search(r'wikibot moderator switch: summon only: on',post.body.lower()) or re.search(r'wikibot moderator switch: summon only: off',post.body.lower()) or re.search(r'wikibot moderator switch: root only: on',post.body.lower()) or re.search(r'wikibot moderator switch: root only: off',post.body.lower())
+  mod_switch = re.search(r'wikibot moderator switch: summon only: on',lowered_body) or re.search(r'wikibot moderator switch: summon only: off',lowered_body) or re.search(r'wikibot moderator switch: root only: on',lowered_body) or re.search(r'wikibot moderator switch: root only: off',lowered_body)
   if has_link or summary_call or mod_switch:
-    if re.search(r"&gt;", post.body) and not summary_call and not re.search(r"autowikibot-welcome-token", post.body.lower()):
+    if re.search(r"&gt;", post.body) and not summary_call and not re.search(r"autowikibot-welcome-token", lowered_body):
       return False
     elif re.search(r"wikipedia.org/wiki/.*wikipedia.org/wiki/", post.body, re.DOTALL):
       return False
