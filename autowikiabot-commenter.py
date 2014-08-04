@@ -17,7 +17,7 @@ dname = os.path.dirname(abspath)
 os.chdir(dname)
 
 def find_link(body):
-    begin_index = body.find("http://") 
+    begin_index = body.find("http://")
     for index, char in enumerate(body[begin_index:]):
         if char in (" ", ")"):
             end_index = index + begin_index
@@ -633,7 +633,7 @@ while True:
           socket.setdefaulttimeout(30)
           slsoup = BeautifulSoup(urllib2.urlopen(url).read())
           for s in slsoup.find_all('s'):
-            if s['line'].lower() in ("description", "background", "about", "biography"):
+            if s['line'].lower() in ("description", "background", "about", "biography", "plot"):
                 section = s['index']
                 break
         ### fetch data from wikia
