@@ -235,6 +235,9 @@ def process_summary_call(post):
   #special("__________________________________________________")
   #special("SUMMARY CALL: %s"%post.id)
   wikia = find_link(body)
+  # If it is the main page, don't try to summarise it
+  if re.search("[M,m]ain_[P,p]age", wikia):
+    return (False, False)
   replacedbody = post.body.lower().replace('wikiabot','___uawb___wikiabot')
   if re.search(r'wikiabot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',replacedbody):
     post_body = re.sub(r'wikiabot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',r'\2',replacedbody).split('___uawb___')[1].split('.')[0].split('?')[0]
