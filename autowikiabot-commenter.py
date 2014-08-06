@@ -154,6 +154,14 @@ def post_reply(reply,post):
   global badsubs
   global submissioncount
   global totalposted
+  # This is a quick hack to fix the double list issue (git issue #12)
+  # Please find the actual source of this bug, and delete this hack
+  # It removes any sentences that are posted more than once
+  lines = []
+  for line in reply.split("\n"):
+    if line not in lines:
+      lines.append(line)
+  reply = '\n'.join(lines)
   try:
     reply = "#####&#009;\n\n######&#009;\n\n####&#009;\n"+reply+"^Parent ^commenter ^can [^toggle ^NSFW](http://www.np.reddit.com/message/compose?to=autowikiabot&subject=AutoWikibot NSFW toggle&message=%2Btoggle-nsfw+____id____) ^or[](#or) [^delete](http://www.np.reddit.com/message/compose?to=autowikiabot&subject=AutoWikibot Deletion&message=%2Bdelete+____id____)^. ^Will ^also ^delete ^on ^comment ^score ^of ^-1 ^or ^less. ^| [^(FAQs)](http://www.np.reddit.com/r/autowikiabot/wiki/index) ^|  [^Source](https://github.com/Timidger/autowikiabot-py)\n ^(Please note this bot is in testing. Any help would be greatly appreciated, even if it is just a bug report! Please checkout the) [^source ^code](https://github.com/Timidger/autowikiabot-py) ^(to submit bugs)"
     a = post.reply('[#placeholder-awb]Comment is being processed... It will be automatically replaced by new text within a minute or will be deleted if that fails.')
