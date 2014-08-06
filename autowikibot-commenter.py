@@ -47,13 +47,8 @@ def save_changing_variables(editsummary):
   global badsubs
   global root_only_subs
   global summon_only_subs
-  # A wiki page and it's corresponding list of subreddits
-  wiki_pages_and_subreddit_lists = {"excludedsubs": badsubs,
-                                    "rootonlysubs": root_only_subs,
-                                    "summononlysubs": summon_only_subs
-                                   }
   # Format the bad subreddits for the wiki page
-  for wiki_page, subreddit_list in wiki_pages_and_subreddit_lists.iteritems():
+  for wiki_page, subreddit_list in WIKI_PAGES_AND_SUBREDDIT_LISTS.iteritems():
     # This line updates the global list to have no redundant entries
     subreddit_list[:] = list(set(summon_only_subs))
     formatted_sub_list = ""
@@ -348,7 +343,96 @@ def process_brackets_syntax(string):
   string = string.replace("\\", "")
   string = ("%s\)"%string)
   return string
-  
+
+def get_mod_switch(post):
+  """Returns a string and a boolean. The first is the option we are changing,
+  The boolean (if True) means they are turning it on, while False means they
+  are turning it off"""
+  lowered_body = post.body.lower()
+  switch_search_string = r"wikibot moderator switch:"
+  # This ugly one liner gets the word immediantly after the search string
+  switch = lowered_body.partition(switch_search_string)[-1].split()[0]
+  # And this ugly thing gets the status (on or off)
+  turn_on = lowered_body.partition(switch + " only:")[-1].split()[0]
+  return switch, turn_on
+
+def set_mod_switch(post):
+  """Attempts to issue the moderator commands contained in the post. It checks
+  if the user is a moderator or if the option is already set. It then properly
+  sets the correct option on the wiki page"""
+  subreddit = post.subreddit
+  mods = r.get_moderators(subreddit)
+  is_mod = any(mod.name == post.author.name for mod in mods)
+  # Doesn't have the authorisation
+  if not is_mod:
+    # If the subreddit is a bad sub, we don't post there
+    if subreddit not in WIKI_PAGES_AND_SUBREDDIT_LISTS["excludedsubs"]:
+      message = ("*Moderator switches can only be switched ON and OFF by "
+                 "moderators of this subreddit.*\n\n*If you want specific"
+                 " feature turned ON or OFF, [ask the moderators]"
+                 "(http://www.np.reddit.com/message/compose?to=%2Fr%2F"
+                 + subreddit + ") and provide them with "
+                 "[this link](http://www.np.reddit.com/r/autowikibot/"
+                 "wiki/modfaqs).*\n\n---\n\n")
+      post_reply(message, post)
+    return
+  switch, turn_on = get_mod_switch(post)
+  verb = "added" if turn_on else "removed"
+  status = "on" if turn_on else "off"
+  reason = "mod_switch_" + switch.lower() + "_" + status
+  # The text displayed in the wiki changelog
+  summary_message = verb + " " + subreddit + ", reason: " + reason
+
+  switch_to_data = {"summon": WIKI_PAGES_AND_SUBREDDIT_LISTS["summononlysubs"],
+                    "root": WIKI_PAGES_AND_SUBREDDIT_LISTS["rootonlysubs"]
+                   }
+
+  subreddit_list = switch_to_data.pop(switch)
+  for other_list in switch_to_data.itervalues():
+    other_list.remove(subreddit)
+  if turn_on and subreddit not in subreddit_list:
+    subreddit_list.append(subreddit)
+  elif not turn_on and subreddit in subreddit_list:
+    subreddit_list.remove(subreddit)
+  else:
+    # This allows the caller to handle error messages to the poster
+    return False
+  save_changing_variables(summary_message)
+  return True
+
+def inform_of_mod_switch(post, post_error=False):
+  """Sends a reply to the moderator who posted to change the value of an
+  option that governs how autowikibot reacts to his subreddit. If post_error
+  is given and not False, then it is assumed that the option was already set
+  to that value and the user will be sent a message detailing his mistake"""
+  # This is to be posted if the option was already set to that value
+  if post_error:
+    # Error message saying the option is already set to that value
+    message = ("*"+feature+" is already* ***"+status+"*** *in "
+               "/r/"+subreddit+"*\n\n---\n\n")
+    post_reply(message, post)
+    return
+  switch, turn_on = get_mod_switch(post)
+  feature = switch.upper() + " Only"
+  status = "ON" if turn_on else "OFF"
+  # Default message to be sent to the mod who made the change
+  message = ("*" + feature+" feature switched* ***" + status + "*** *for"
+             "/r/" + subreddit + "*\n\n--\n\n")
+  # Send the message to the mod who made the change
+  sent = post_reply(message, post)
+  title = "MODSWITCH: %s" %subreddit
+  subtext = ("/u/" + post.author.name + ": @ [comment](" + post.permalink
+             + ")\n\n" + post.body + "\n\n---\n\n" + comment)
+  r.submit('acini', title, text=subtext)
+  if sent:
+    special("MODSWITCH: %s @ %s"%(comment.replace('*',''),post.id))
+  else:
+    fail("MODSWITCH REPLY FAILED: %s @ %s"%(comment,post.id))
+    title = "MODSWITCH REPLY FAILED: %s"%subreddit
+    subtext = ("/u/" + post.author.name + ": @ [comment](" + post.permalink
+               + ")\n\n"+ post.body + "\n\n---\n\n" + comment)
+    r.submit('acini', title, text=subtext)
+
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
@@ -382,6 +466,11 @@ lastload = int(time.strftime("%s"))
 has_list = False
 totalposted = 0
 
+# A wiki page and its corresponding list of subreddits
+WIKI_PAGES_AND_SUBREDDIT_LISTS = {"excludedsubs": badsubs,
+                                  "rootonlysubs": root_only_subs,
+                                  "summononlysubs": summon_only_subs
+                                 }
 while True:
   try:
     #comments = r.get_comments("all",limit = 1000)
@@ -393,92 +482,17 @@ while True:
       diff = now - lastload
       if diff > 899:
         load_changing_variables()
-	bluelog("BANNED USER LIST RENEWED")
-	save_changing_variables('scheduled dump')
-	lastload = now
-      
+        bluelog("BANNED USER LIST RENEWED")
+        save_changing_variables('scheduled dump')
+        lastload = now
+        continue
+
       if filterpass(post):
-	if mod_switch:
-	  try:
-	    mod_switch_summon_on = re.search(r'wikibot moderator switch: summon only: on',post.body.lower())
-	    mod_switch_summon_off = re.search(r'wikibot moderator switch: summon only: off',post.body.lower())
-	    mod_switch_root_on = re.search(r'wikibot moderator switch: root only: on',post.body.lower())
-	    mod_switch_root_off = re.search(r'wikibot moderator switch: root only: off',post.body.lower())
-	    
-	    mods = r.get_moderators(str(post.subreddit))
-	    is_mod = False
-	    for idx in range(0,len(mods)):
-	      if mods[idx].name == post.author.name:
-		is_mod = True
-		break
-	    if is_mod:
-	      if mod_switch_summon_on:
-		if str(post.subreddit) in summon_only_subs:
-		  comment = "*Summon only feature is already* ***ON*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-		  summon_only_subs.append(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'added '+str(post.subreddit)+', reason:mod_switch_summon_on'
-		  save_changing_variables(editsummary)
-		  comment = "*Summon only feature switched* ***ON*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      elif mod_switch_summon_off:
-		if str(post.subreddit) not in summon_only_subs:
-		  comment = "*Summon only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-                  load_changing_variables()
-		  summon_only_subs.remove(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'removed '+str(post.subreddit)+', reason:mod_switch_summon_off'
-		  save_changing_variables(editsummary)
-		  comment = "*Summon only feature switched* ***OFF*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      elif mod_switch_root_on:
-		if str(post.subreddit) in root_only_subs:
-		  comment = "*Root only feature is already* ***ON*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-		  root_only_subs.append(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'added '+str(post.subreddit)+', reason:mod_switch_root_on'
-		  save_changing_variables(editsummary)
-		  comment = "*Root only feature switched* ***ON*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      elif mod_switch_root_off:
-		if str(post.subreddit) not in root_only_subs:
-		  comment = "*Root only feature is already* ***OFF*** *in /r/"+str(post.subreddit)+"*\n\n---\n\n"
-		else:
-                  load_changing_variables()
-		  root_only_subs.remove(str(post.subreddit))
-		  if str(post.subreddit) in badsubs:
-		    badsubs.remove(str(post.subreddit))
-		  editsummary = 'removed '+str(post.subreddit)+', reason:mod_switch_root_off'
-		  save_changing_variables(editsummary)
-		  comment = "*Root only feature switched* ***OFF*** *for /r/"+str(post.subreddit)+"*\n\n---\n\n"
-	      else:
-		comment = False
-	      
-	      if comment:
-		a = post_reply(comment,post)
-		title = "MODSWITCH: %s"%str(post.subreddit)
-		subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
-		r.submit('acini',title,text=subtext)
-	      if a:
-		special("MODSWITCH: %s @ %s"%(comment.replace('*',''),post.id))
-	      else:
-		fail("MODSWITCH REPLY FAILED: %s @ %s"%(comment,post.id))
-		title = "MODSWITCH REPLY FAILED: %s"%str(post.subreddit)
-		subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+comment
-		r.submit('acini',title,text=subtext)
-	    else:
-	      if post.subreddit not in badsubs:
-		comment = "*Moderator switches can only be switched ON and OFF by moderators of this subreddit.*\n\n*If you want specific feature turned ON or OFF, [ask the moderators](http://www.np.reddit.com/message/compose?to=%2Fr%2F"+str(post.subreddit)+") and provide them with [this link](http://www.np.reddit.com/r/autowikibot/wiki/modfaqs).*\n\n---\n\n"
-		post_reply(comment,post)
-	  except Exception as e:
-	    title = "MODSWITCH FAILURE !!: %s"%str(post.subreddit)
-	    traceback.print_exc()
-	    subtext = "/u/"+str(post.author.name)+": @ [comment]("+post.permalink+")\n\n"+str(post.body)+"\n\n---\n\n"+str(e)
-	    r.submit('acini',title,text=subtext)
-	  continue
+        if mod_switch:
+          # If the option is successfully set
+          success = set_mod_switch(post)
+          inform_of_mod_switch(post, success)
+          continue
 	elif has_link:
 	  url_string = get_url_string(post)
 	  #log("__________________________________________________")
