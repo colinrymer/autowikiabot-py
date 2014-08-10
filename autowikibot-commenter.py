@@ -219,9 +219,8 @@ def process_summary_call(post):
         elif title.lower() != term:
             try:
                 discard = wikipedia.page(term,auto_suggest=False,redirect=False).title
-            except Exception as e:
-                if re.search('resulted in a redirect',str(e)):
-                    bit_comment_start = "*\"" + term.strip() + "\" redirects to* "
+            except wikipedia.exceptions.RedirectError as e:
+                bit_comment_start = "*\"" + term.strip() + "\" redirects to* "
         else:
             bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
         if re.search(r'#',title):
@@ -234,40 +233,39 @@ def process_summary_call(post):
         url_string = title
         #log("INTERPRETATION: %s"%filter(lambda x: x in string.printable, title))
         return (url_string,bit_comment_start)
+    except wikipedia.exceptions.RedirectError as e:
+        deflist = ">Definitions for few of those terms:"
+        for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
+            deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
+            if idx > 3:
+                break
+        summary = "*Oops,* ***"+term.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
+        #log("ASKING FOR DISAMBIGUATION")
     except Exception as e:
-        if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
-            deflist = ">Definitions for few of those terms:"
-            for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-                deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
-                if idx > 3:
-                    break
-            summary = "*Oops,* ***"+term.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-            #log("ASKING FOR DISAMBIGUATION")
-        else:
-            #log("INTERPRETATION FAIL: %s"%filter(lambda x: x in string.printable, term))
-            try:
-                terms = "\""+term+"\""
-                suggesttitle = str(wikipedia.search(terms,results=1)[0])
-                #log("SUGGESTING: %s"%filter(lambda x: x in string.printable, suggesttitle))
-                if suggesttitle.lower() == term:
-                    bit_comment_start = ""
-                else:
-                    bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
-                if str(suggesttitle).endswith(')') and not re.search('\(',str(suggesttitle)):
-                    suggesttitle = suggesttitle[0:--(suggesttitle.__len__()-1)]
-                return (str(suggesttitle),bit_comment_start)
-            except:
-                trialtitle = wikipedia.page(term,auto_suggest=True).title
-                if trialtitle.lower() == term:
-                    bit_comment_start = ""
-                else:
-                    bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
-                #log("TRIAL SUGGESTION: %s"%filter(lambda x: x in string.printable, trialtitle))
-                if str(trialtitle).endswith(')') and not re.search('\(',str(trialtitle)):
-                    trialtitle = trialtitle[0:--(trialtitle.__len__()-1)]
-                return (str(trialtitle),bit_comment_start)
-        post_reply(summary,post)
-        return (False,False)
+        #log("INTERPRETATION FAIL: %s"%filter(lambda x: x in string.printable, term))
+        try:
+            terms = "\""+term+"\""
+            suggesttitle = str(wikipedia.search(terms,results=1)[0])
+            #log("SUGGESTING: %s"%filter(lambda x: x in string.printable, suggesttitle))
+            if suggesttitle.lower() == term:
+                bit_comment_start = ""
+            else:
+                bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
+            if str(suggesttitle).endswith(')') and not re.search('\(',str(suggesttitle)):
+                suggesttitle = suggesttitle[0:--(suggesttitle.__len__()-1)]
+            return (str(suggesttitle),bit_comment_start)
+        except:
+            trialtitle = wikipedia.page(term,auto_suggest=True).title
+            if trialtitle.lower() == term:
+                bit_comment_start = ""
+            else:
+                bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
+            #log("TRIAL SUGGESTION: %s"%filter(lambda x: x in string.printable, trialtitle))
+            if str(trialtitle).endswith(')') and not re.search('\(',str(trialtitle)):
+                trialtitle = trialtitle[0:--(trialtitle.__len__()-1)]
+            return (str(trialtitle),bit_comment_start)
+    post_reply(summary,post)
+    return (False,False)
 
 def clean_soup(soup):
     while soup.table:
@@ -462,7 +460,7 @@ load_data()
 im = pyimgur.Imgur(imgur_client_id)
 global pagepropsdata
 submissioncount = collections.Counter()
-lastload = int(time.strftime("%s"))
+lastload = int(time.time())
 has_list = False
 totalposted = 0
 
@@ -473,12 +471,10 @@ WIKI_PAGES_AND_SUBREDDIT_LISTS = {"excludedsubs": badsubs,
                                  }
 while True:
     try:
-        #comments = r.get_comments("all",limit = 1000)
-        #for post in comments:
         for post in praw.helpers.comment_stream(r,str(sys.argv[1]), limit = None, verbosity=0):
 
             ### Dirty timer hack
-            now = int(time.strftime("%s"))
+            now = int(time.time())
             diff = now - lastload
             if diff > 899:
                 load_changing_variables()
@@ -488,8 +484,8 @@ while True:
                 continue
 
             if filterpass(post):
+                # If the option is successfully set
                 if mod_switch:
-        # If the option is successfully set
                     success = set_mod_switch(post)
                     inform_of_mod_switch(post, success)
                     continue
@@ -505,17 +501,16 @@ while True:
                         if url_string == False:
                             continue
                         url_string = str(url_string)
-                    except Exception as e:
-                        if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
-                            deflist = ">Definitions for few of those terms:"
-                            for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-                                deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
-                                if idx > 3:
-                                    break
-                            summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-                            #log("ASKING FOR DISAMBIGUATION")
-                            post_reply(summary,post)
-                            continue
+                    except wikipedia.exceptions.RedirectError as e:
+                        deflist = ">Definitions for few of those terms:"
+                        for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
+                            deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
+                            if idx > 3:
+                                break
+                        summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
+                        #log("ASKING FOR DISAMBIGUATION")
+                        post_reply(summary,post)
+                        continue
                 if not url_string:
                     continue
 
@@ -711,29 +706,28 @@ while True:
                             comment = "*Here you go:*\n\n---\n\n>\n"+summary+"\n\n---\n\n"
                             post_reply(comment,post)
                             continue
+                        except wikipedia.exceptions.RedirectError as e:
+                            deflist = ">Definitions for few of those terms:"
+                            for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
+                                deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
+                                if idx > 3:
+                                    break
+                            #comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
+                            summary = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
+                            #log("ASKING FOR DISAMBIGUATION")
                         except Exception as e:
-                            if bool(re.search('.*may refer to:.*',filter(lambda x: x in string.printable, str(e)))):
-                                deflist = ">Definitions for few of those terms:"
-                                for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-                                    deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
-                                    if idx > 3:
-                                        break
-                                #comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
-                                summary = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-                                #log("ASKING FOR DISAMBIGUATION")
-                            else:
-                                #log("INTERPRETATION FAIL: %s"%term)
-                                try:
-                                    terms = "\""+term+"\""
-                                    suggest = wikipedia.search(terms,results=1)[0]
-                                    trialsummary = wikipedia.summary(suggest,auto_suggest=True)
-                                    comment = "*Nearest match for* ***"+term.trim()+"*** *is* ***"+suggest+"*** :\n\n---\n\n>"+trialsummary+"\n\n---\n\n"
-                                    #log("SUGGESTING %s"%suggest)
-                                except:
-                                    comment = "*Sorry, couldn't find a wikipedia article about that or maybe I couldn't process that due to Wikipedia server errors.*\n\n---\n\n"
-                                    #log("COULD NOT SUGGEST FOR %s"%term)
-                                post_reply(comment,post)
-                                continue
+                            #log("INTERPRETATION FAIL: %s"%term)
+                            try:
+                                terms = "\""+term+"\""
+                                suggest = wikipedia.search(terms,results=1)[0]
+                                trialsummary = wikipedia.summary(suggest,auto_suggest=True)
+                                comment = "*Nearest match for* ***"+term.trim()+"*** *is* ***"+suggest+"*** :\n\n---\n\n>"+trialsummary+"\n\n---\n\n"
+                                #log("SUGGESTING %s"%suggest)
+                            except:
+                                comment = "*Sorry, couldn't find a wikipedia article about that or maybe I couldn't process that due to Wikipedia server errors.*\n\n---\n\n"
+                                #log("COULD NOT SUGGEST FOR %s"%term)
+                            post_reply(comment,post)
+                            continue
                     continue
                 data = strip_wiki(data)
                 data = re.sub("Cite error: There are ref tags on this page, but the references will not show without a \{\{reflist\}\} template \(see the help page\)\.", '', data)
