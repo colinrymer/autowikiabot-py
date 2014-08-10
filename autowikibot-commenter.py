@@ -496,11 +496,7 @@ while True:
                     bit_comment_start = ""
                 else:
                     try:
-                        url_string = ""
                         url_string, bit_comment_start = process_summary_call(post)
-                        if url_string == False:
-                            continue
-                        url_string = str(url_string)
                     except wikipedia.exceptions.RedirectError as e:
                         deflist = ">Definitions for few of those terms:"
                         for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
