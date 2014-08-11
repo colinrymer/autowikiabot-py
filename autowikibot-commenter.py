@@ -318,9 +318,7 @@ def reddify(html):
     return html
 
 def strip_wiki(wiki):
-    wiki = re.sub('\[[0-9]\][^(]','',wiki)
-    wiki = re.sub('\[[0-9][0-9]\][^(]','',wiki)
-    wiki = re.sub('\[[0-9][0-9][0-9]\][^(]','',wiki)
+    wiki = re.sub('\[[0-9]?[0-9]?[0-9]\][^(]','',wiki)
     wiki = re.sub("\( listen\)", '', wiki)
     return wiki
 
