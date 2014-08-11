@@ -289,30 +289,38 @@ def clean_soup(soup):
 
 def reddify(html):
     global has_list
+
+    def replace_with_p(string_match):
+        string = string_match.string
+        start_index = re.search(";/?", string).end()
+        end_index = string.find("&", start_index)
+        # Replace the bit after ";/?" and before "&" with "p"
+        new_string = string.replace(string[start_index: end_index], "p")
+        return new_string
+
     if re.search('&lt;li&gt;',html):
         has_list = True
     else:
         has_list = False
-    html = html.replace('&lt;b&gt;', '__')
-    html = html.replace('&lt;/b&gt;', '__')
-    html = html.replace('&lt;i&gt;', '*')
-    html = html.replace('&lt;/i&gt;', '*')
-    if '__*' in html and '*__' in html:
-        html = html.replace('__*', '___')
-        html = html.replace('*__', '___')
+    # Replace HTML's italicise tags with reddit's italicise tags (__ and *)
+    html = re.sub('&lt;/?b&gt;', '__', html)
+    html = re.sub('&lt;/?i&gt;', '*', html)
+
+     # They'll cancel each other out, so replace overlaps with "___"
+    html = re.sub('*?__*?', '___', html)
+
+    # Replace the tags that dictate raised words
+    # Replace those replaces with re.sub(string, some_function, html)
     html = re.sub('&lt;sup&gt;','^',html)
     html = re.sub('&lt;sup.*?&gt;',' ',html)
     html = html.replace('&lt;/sup&gt;','')
-    html = html.replace('&lt;dt&gt;','&lt;p&gt;')
-    html = html.replace('&lt;/dt&gt;','&lt;/p&gt;')
-    html = html.replace('&lt;ul&gt;','&lt;p&gt;')
-    html = html.replace('&lt;/ul&gt;','&lt;/p&gt;')
-    html = html.replace('&lt;ol&gt;','&lt;p&gt;')
-    html = html.replace('&lt;/ol&gt;','&lt;/p&gt;')
-    html = html.replace('&lt;dd&gt;','&lt;p&gt;>')
-    html = html.replace('&lt;/dd&gt;','&lt;/p&gt; ')
-    html = html.replace('&lt;li&gt;','&lt;p&gt;* ')
-    html = html.replace('&lt;/li&gt;','&lt;/p&gt;')
+    escaped_codes = 'dt ul ol dd li'.split()
+    for code in escaped_codes:
+        search_string = '&lt;/?' + code + '&gt;'
+        # Replace the escape code with "p"
+        html = re.sub(search_stringe, replace_with_p, html)
+
+    # Special case replacements
     html = html.replace('&lt;blockquote&gt;','&lt;p&gt;>')
     html = html.replace('&lt;/blockquote&gt;','&lt;/p&gt; ')
     return html
