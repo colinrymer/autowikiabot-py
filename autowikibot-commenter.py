@@ -325,12 +325,10 @@ def strip_wiki(wiki):
     return wiki
 
 def truncate(data, length):
-    if data.__len__() > length:
-        log("TEXT CUT AT %s CHARACTERS"%length)
-        data = data[0:length]+" ... \n`(Truncated at "+str(length)+" characters)`"
-        return data
-    else:
-        return data
+    if len(data) > length:
+        log("TEXT CUT AT %d CHARACTERS" %length)
+        data = data[:length] + " ... \n`(Truncated at %d characters)`" %length
+    return data
 
 def process_brackets_links(string):
     string = string.replace("\\", "")
