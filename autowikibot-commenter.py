@@ -324,12 +324,6 @@ def strip_wiki(wiki):
     wiki = re.sub("\( listen\)", '', wiki)
     return wiki
 
-def truncate(data, length):
-    if len(data) > length:
-        log("TEXT CUT AT %d CHARACTERS" %length)
-        data = data[:length] + " ... \n`(Truncated at %d characters)`" %length
-    return data
-
 def process_brackets_links(string):
     string = string.replace("\\", "")
     string += ")"
@@ -719,7 +713,6 @@ while True:
                     continue
                 data = strip_wiki(data)
                 data = re.sub("Cite error: There are ref tags on this page, but the references will not show without a \{\{reflist\}\} template \(see the help page\)\.", '', data)
-                #truncateddata = truncate(data,1000)
                 if data.__len__() < 50:
                     #log("TOO SMALL INTRODUCTION PARAGRAPH")
                     continue
