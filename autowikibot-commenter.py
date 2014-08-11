@@ -333,13 +333,8 @@ def truncate(data, length):
         return data
 
 def process_brackets_links(string):
-    string = ("%s)"%string)
     string = string.replace("\\", "")
-    return string
-
-def process_brackets_syntax(string):
-    string = string.replace("\\", "")
-    string = ("%s\)"%string)
+    string += ")"
     return string
 
 def get_mod_switch(post):
@@ -708,8 +703,7 @@ while True:
                                 deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
                                 if idx > 3:
                                     break
-                            #comment = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---"+deflist+"\n\n---\n\nAnd the remaining list:\n\n"+str(e).replace('\n','\n\n>')+"\n\n---\n\n"
-                            summary = "*Oops,* ***"+process_brackets_syntax(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
+                            summary = "*Oops,* ***"+process_brackets_links(url_string).strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
                             #log("ASKING FOR DISAMBIGUATION")
                         except Exception as e:
                             #log("INTERPRETATION FAIL: %s"%term)
