@@ -142,7 +142,7 @@ def filterpass(post):
     if (post.author.name == USERNAME) or post.author.name in banned_users:
         return False
     summary_call = re.search(r'wikibot.\s*wh.{1,3}(\'s|\s+is|\s+are|\s+was)\s+(an\s+|a\s+|the\s+|)(.*?)$',lowered_body) or re.search(r'wikibot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',lowered_body) or re.search("\?\-.*\-\?",lowered_body)
-    has_link = any(string in post.body for string in ['en.wikipedia.org/wiki/', 'en.m.wikipedia.org/wiki/'])
+    has_link = any(url in post.body for url in ['en.wikipedia.org/wiki/', 'en.m.wikipedia.org/wiki/'])
     mod_switch = re.search(r'wikibot moderator switch: summon only: on',lowered_body) or re.search(r'wikibot moderator switch: summon only: off',lowered_body) or re.search(r'wikibot moderator switch: root only: on',lowered_body) or re.search(r'wikibot moderator switch: root only: off',lowered_body)
     if has_link or summary_call or mod_switch:
         if re.search(r"&gt;", post.body) and not summary_call and not re.search(r"autowikibot-welcome-token", lowered_body):
@@ -151,7 +151,7 @@ def filterpass(post):
             return False
         elif str(post.subreddit) in badsubs and not mod_switch:
             return False
-        elif any(string in post.body for string in ['/wiki/File:', '/wiki/List_of', '/wiki/User:', '/wiki/Template:', '/wiki/Category:', '/wiki/Wikipedia:', '/wiki/Talk:']):
+        elif any(url in post.body for url in ['/wiki/File:', '/wiki/List_of', '/wiki/User:', '/wiki/Template:', '/wiki/Category:', '/wiki/Wikipedia:', '/wiki/Talk:']):
             return False
         elif str(post.subreddit) in root_only_subs and not post.is_root and not mod_switch:
             return False
@@ -386,6 +386,10 @@ def inform_of_mod_switch(post, post_error=False):
     option that governs how autowikibot reacts to his subreddit. If post_error
     is given and not False, then it is assumed that the option was already set
     to that value and the user will be sent a message detailing his mistake"""
+    subreddit = post.subreddit
+    switch, turn_on = get_mod_switch(post)
+    feature = switch.upper() + " Only"
+    status = "ON" if turn_on else "OFF"
     # This is to be posted if the option was already set to that value
     if post_error:
         # Error message saying the option is already set to that value
@@ -393,9 +397,6 @@ def inform_of_mod_switch(post, post_error=False):
                    "/r/"+subreddit+"*\n\n---\n\n")
         post_reply(message, post)
         return
-    switch, turn_on = get_mod_switch(post)
-    feature = switch.upper() + " Only"
-    status = "ON" if turn_on else "OFF"
     # Default message to be sent to the mod who made the change
     message = ("*" + feature+" feature switched* ***" + status + "*** *for"
                "/r/" + subreddit + "*\n\n--\n\n")
@@ -488,10 +489,10 @@ while True:
                 ### check for subheading in url string, process if present
                 if re.search(r"#", url_string) and not summary_call:
                     pagename, sectionname = url_string.split('#')
-                    for string in (pagename, sectionname):
-                        string = string.replace(')', '\)')
-                        string = string.replace('(', '\(')
-                        string = string.strip().replace('.', '%')
+                    for url_string in (pagename, sectionname):
+                        url_string = url_string.replace(')', '\)')
+                        url_string = url_string.replace('(', '\(')
+                        url_string = url_string.strip().replace('.', '%')
                         string = urllib.unquote(string)
                     try:
                         url = ("https://en.wikipedia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
