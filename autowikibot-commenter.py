@@ -191,81 +191,70 @@ def process_summary_call(post):
     #special("SUMMARY CALL: %s"%post.id)
     replacedbody = post.body.lower().replace('wikibot','___uawb___wikibot')
     if re.search(r'wikibot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',replacedbody):
-        post_body = re.sub(r'wikibot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',r'\2',replacedbody).split('___uawb___')[1].split('.')[0].split('?')[0]
-        term = post_body.strip()
+        term = re.sub(r'wikibot.\s*tell\s.{1,23}\sabout\s+(an\s+|a\s+|the\s+|)(.*?)$',r'\2',replacedbody).split('___uawb___')[1].split('.')[0].split('?')[0]
     elif re.search(r'wikibot.\s*wh.{1,3}(\'s|\s+is|\s+are|\s+was)\s+(an\s+|a\s+|the\s+|)(.*?)$',replacedbody):
-        post_body = re.sub(r'wikibot.\s*wh.{1,3}(\'s|\s+is|\s+are|\s+was)\s+(an\s+|a\s+|the\s+|)(.*?)$',r'\3',replacedbody).split('___uawb___')[1].split('.')[0].split('?')[0]
-        term = post_body.strip()
+        term = re.sub(r'wikibot.\s*wh.{1,3}(\'s|\s+is|\s+are|\s+was)\s+(an\s+|a\s+|the\s+|)(.*?)$',r'\3',replacedbody).split('___uawb___')[1].split('.')[0].split('?')[0]
     elif re.search("\?\-.*\-\?",replacedbody):
         term = re.search("\?\-.*\-\?",post.body.lower()).group(0).strip('?').strip('-').strip()
+    term = term.strip()
 
     special("SUMMARY CALL: %s @ %s"%(filter(lambda x: x in string.printable, term),post.id))
-    if term.lower().strip() == 'love':
-        #post_reply('*Baby don\'t hurt me! Now seriously, stop asking me about love so many times! O.o What were we discussing about in this thread again?*',post)
-        return(False,False)
-    #if term.lower().strip() == 'wikibot':
-        #post_reply('*Me! I know me.*',post)
-        return(False,False)
-    if term.lower().strip() == 'reddit':
-        #post_reply('*This place. It feels like home.*',post)
-        return(False,False)
-    if term.strip().__len__() < 2 or term == None:
+    if len(term) < 2 or term is None:
         #log("EMPTY TERM")
         return(False,False)
     try:
-        title = wikipedia.page(term,auto_suggest=False).title
-        if title.lower() == term:
-            bit_comment_start = ""
-        elif title.lower() != term:
+        bit_comment_start = ""
+        title = wikipedia.page(term, auto_suggest=True).title
+        if title.lower() != term:
             try:
-                discard = wikipedia.page(term,auto_suggest=False,redirect=False).title
+                # See if it redirects, if it does have the message include that
+                wikipedia.page(term, auto_suggest=False, redirect=False)
             except wikipedia.exceptions.RedirectError as e:
-                bit_comment_start = "*\"" + term.strip() + "\" redirects to* "
-        else:
-            bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
-        if re.search(r'#',title):
-            url = wikipedia.page(title.split('#')[0],auto_suggest=False).url
-            sectionurl =  url + "#" + title.split('#')[1]
-            comment = "*Nearest match for* ***" + term.strip() + "*** *is the section ["+title.split('#')[1]+"]("+sectionurl.replace(')','\)')+") in article ["+title.split('#')[0]+"]("+url+").*\n\n---\n\n"
+                bit_comment_start = "*\"" + term + "\" redirects to* "
+        # If they specified a section
+        if re.search(r'#', title):
+            # Get the article and the section names
+            article, section = title.split('#')
+            # Get the url for the article page
+            url = wikipedia.page(article, auto_suggest=False).url
+            # Append the section to the url
+            sectionurl =  (url + "#" + section).replace(')','\)')
+            comment = ("*Nearest match for* ***" + term
+                      + "*** *is the section [" + section + "]("
+                      + sectionurl + ") in article ["
+                      + article + "](" + url + ").*\n\n---\n\n")
+
             post_reply(comment,post)
             #log("RELEVANT SECTION SUGGESTED: %s"%filter(lambda x: x in string.printable, title))
             return (False,False)
-        url_string = title
         #log("INTERPRETATION: %s"%filter(lambda x: x in string.printable, title))
-        return (url_string,bit_comment_start)
     except wikipedia.exceptions.RedirectError as e:
         deflist = ">Definitions for few of those terms:"
-        for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-            deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
-            if idx > 3:
-                break
-        summary = "*Oops,* ***"+term.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
+        # Get only the printable characters
+        articles = filter(lambda x: x in string.printable, str(e))
+        # Get a list of only the first 5 article names
+        articles = articles.split('may refer to: \n')[1].splitlines()[:4]
+        for article in articles:
+            article = article.strip()
+            # Get the page summary
+            page_summary = wikipedia.summary(article, auto_suggest=False, sentences=1)
+            # Add it to the definiton list that will be added to the main summary
+            deflist += "\n\n>1. **"+article+"**: "+ page_summary
+        summary = ("*Oops,* ***" + term + "*** *landed me on a disambiguation "
+                   "page.*\n\n---\n\n" + deflist + "\n\n---\n\n")
+        post_reply(summary,post)
+        return (False,False)
         #log("ASKING FOR DISAMBIGUATION")
     except Exception as e:
         #log("INTERPRETATION FAIL: %s"%filter(lambda x: x in string.printable, term))
-        try:
-            terms = "\""+term+"\""
-            suggesttitle = str(wikipedia.search(terms,results=1)[0])
-            #log("SUGGESTING: %s"%filter(lambda x: x in string.printable, suggesttitle))
-            if suggesttitle.lower() == term:
-                bit_comment_start = ""
-            else:
-                bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
-            if str(suggesttitle).endswith(')') and not re.search('\(',str(suggesttitle)):
-                suggesttitle = suggesttitle[0:--(suggesttitle.__len__()-1)]
-            return (str(suggesttitle),bit_comment_start)
-        except:
-            trialtitle = wikipedia.page(term,auto_suggest=True).title
-            if trialtitle.lower() == term:
-                bit_comment_start = ""
-            else:
-                bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
-            #log("TRIAL SUGGESTION: %s"%filter(lambda x: x in string.printable, trialtitle))
-            if str(trialtitle).endswith(')') and not re.search('\(',str(trialtitle)):
-                trialtitle = trialtitle[0:--(trialtitle.__len__()-1)]
-            return (str(trialtitle),bit_comment_start)
-    post_reply(summary,post)
-    return (False,False)
+        title = wikipedia.page(term,auto_suggest=True).title
+        #log("SUGGESTING: %s"%filter(lambda x: x in string.printable, title))
+        bit_comment_start = ""
+        if title.lower() != term:
+            bit_comment_start = "*Nearest match for* ***" + term.strip() + "*** *is* "
+        if title.endswith(')') and not re.search('\(', title):
+            title = title[:-1]
+    return (title, bit_comment_start)
 
 def clean_soup(soup):
     while soup.table:
@@ -488,18 +477,7 @@ while True:
                     #log("LINK TRIGGER: %s"%post.id)
                     bit_comment_start = ""
                 else:
-                    try:
-                        url_string, bit_comment_start = process_summary_call(post)
-                    except wikipedia.exceptions.RedirectError as e:
-                        deflist = ">Definitions for few of those terms:"
-                        for idx, val in enumerate(filter(lambda x: x in string.printable, str(e)).split('may refer to: \n')[1].split('\n')):
-                            deflist = deflist + "\n\n>1. **"+val.strip()+"**: "+ wikipedia.summary(val,auto_suggest=False,sentences=1)
-                            if idx > 3:
-                                break
-                        summary = "*Oops,* ***"+url_string.strip()+"*** *landed me on a disambiguation page.*\n\n---\n\n"+deflist+"\n\n---\n\n"
-                        #log("ASKING FOR DISAMBIGUATION")
-                        post_reply(summary,post)
-                        continue
+                    url_string, bit_comment_start = process_summary_call(post)
                 if not url_string:
                     continue
 
