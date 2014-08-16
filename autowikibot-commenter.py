@@ -258,22 +258,23 @@ def process_summary_call(post):
 
 def clean_soup(soup):
     while soup.table:
-        discard = soup.table.extract()
-    while soup.find(id='coordinates'):
-        discard = soup.find(id='coordinates').extract()
-    while soup.find("strong", { "class" : "error mw-ext-cite-error" }):
-        discard = soup.find("strong", { "class" : "error mw-ext-cite-error" }).extract()
-    while soup.find("sup", { "class" : "reference" }):
-        discard = soup.find("sup", { "class" : "reference" }).extract()
-    while soup.find("span", { "class" : "t_nihongo_help noprint" }):
-        discard = soup.find("span", { "class" : "t_nihongo_help noprint" }).extract()
-    while soup.find("span", { "class" : "sortkey" }):
-        discard = soup.find("span", { "class" : "sortkey" }).extract()
-
+        soup.table.extract()
+    # These are the different tags we are going to find and extract
+    tags = ( ("strong", { "class" : "error mw-ext-cite-error" }),
+             ("sup", { "class" : "reference" }),
+             ("span", { "class" : "t_nihongo_help noprint" })
+             ("span", { "class" : "sortkey" })
+           )
+    for tag in tags:
+        # This weird syntax passes each object as a parameter into the function
+        # E.g: soup.find(tags[0[0], tags[0][1]) etc.
+        while soup.find(*tag):
+            soup.find(*tag).extract()
     for tag in soup:
         if tag.name == 'a' and tag.has_attr('href'):
+            # Replace with a reddit hyperlink
             rep = "["+tag.text+"]("+tag['href']+")"
-            discard = tag.replace_with(rep)
+            tag.replace_with(rep)
     return soup
 
 def reddify(html):
