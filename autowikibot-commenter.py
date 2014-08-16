@@ -486,17 +486,13 @@ while True:
 
                 is_section = False
                 ### check for subheading in url string, process if present
-                if re.search(r"#",url_string) and not summary_call:
-                    pagenameraw = url_string.split('#')[0]
-                    pagename = pagenameraw.replace(')','\)')
-                    pagename = pagename.replace('(','\(')
-                    pagename = pagename.strip().replace('.','%')
-                    pagename = urllib.unquote(str(pagename))
-                    sectionnameraw = url_string.split('#')[1]
-                    sectionname = sectionnameraw.replace('(','\(')
-                    sectionname = sectionname.replace(')','\)')
-                    sectionname = sectionname.strip().replace('.','%')
-                    sectionname = urllib.unquote(str(sectionname))
+                if re.search(r"#", url_string) and not summary_call:
+                    pagename, sectionname = url_string.split('#')
+                    for string in (pagename, sectionname):
+                        string = string.replace(')', '\)')
+                        string = string.replace('(', '\(')
+                        string = string.strip().replace('.', '%')
+                        string = urllib.unquote(string)
                     try:
                         url = ("https://en.wikipedia.org/w/api.php?action=parse&page="+pagename.encode('utf-8','ignore')+"&format=xml&prop=sections")
                         socket.setdefaulttimeout(30)
