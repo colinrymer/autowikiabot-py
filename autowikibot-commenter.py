@@ -308,7 +308,7 @@ def reddify(html):
     for code in escaped_codes:
         search_string = '&lt;/?' + code + '&gt;'
         # Replace the escape code with "p"
-        html = re.sub(search_stringe, replace_with_p, html)
+        html = re.sub(search_string, replace_with_p, html)
 
     # Special case replacements
     html = html.replace('&lt;blockquote&gt;','&lt;p&gt;>')
